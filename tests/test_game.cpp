@@ -91,9 +91,12 @@ int main() {
         auto g=empty();g.setTile({6,5},Tile::Hard);addBomb(g,{5,5},4);g.explodeBombs({1});
         require(!fireAt(g,{6,5})&&!fireAt(g,{7,5})&&g.tile({6,5})==Tile::Hard);
     });
-    test("11 soft block breaks and stops ray",[]{
-        auto g=empty();g.setTile({6,5},Tile::Soft);addBomb(g,{5,5},4);g.explodeBombs({1});
-        require(g.tile({6,5})==Tile::Floor&&fireAt(g,{6,5})&&!fireAt(g,{7,5}));
+    test("11 range blast breaks every soft block until a hard wall",[]{
+        auto g=empty();g.setTile({6,5},Tile::Soft);g.setTile({7,5},Tile::Soft);g.setTile({8,5},Tile::Soft);
+        g.setTile({9,5},Tile::Hard);addBomb(g,{5,5},5);g.explodeBombs({1});
+        require(g.tile({6,5})==Tile::Floor&&g.tile({7,5})==Tile::Floor&&g.tile({8,5})==Tile::Floor);
+        require(fireAt(g,{6,5})&&fireAt(g,{7,5})&&fireAt(g,{8,5}));
+        require(!fireAt(g,{9,5})&&!fireAt(g,{10,5}));
     });
     test("12 flames expire after half second",[]{
         auto g=empty();addBomb(g,{5,5});g.explodeBombs({1});advance(g,.4f);require(!g.flames.empty());
@@ -109,12 +112,11 @@ int main() {
         auto g=empty();addBomb(g,{5,5});g.explodeBombs({1,1,1});
         require(g.flames.size()==5&&g.bombs.empty());
     });
-    test("15 simultaneous rays do not tunnel through broken crates",[]{
+    test("15 simultaneous rays break and pass through soft blocks",[]{
         auto g=empty();g.setTile({5,5},Tile::Soft);addBomb(g,{3,5},5);addBomb(g,{7,5},5);
         g.explodeBombs({1,2});require(g.bombs.empty());
-        require(fireAt(g,{5,5}));
-        int atSix=0;for(const auto& f:g.flames)if(f.cell==Cell{6,5})++atSix;
-        require(atSix==1,"left bomb crossed a same-wave soft block");
+        require(g.tile({5,5})==Tile::Floor&&fireAt(g,{4,5})&&fireAt(g,{5,5})&&fireAt(g,{6,5}));
+        auto events=g.takeEvents();require(std::count(events.begin(),events.end(),Event::Explode)==2);
     });
     test("16 bomb ray stops at another bomb",[]{
         auto g=empty();addBomb(g,{3,5},6);addBomb(g,{5,5},1,30);g.explodeBombs({1});

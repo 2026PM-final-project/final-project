@@ -331,7 +331,8 @@ void Game::explodeBombs(const std::vector<int>& ids) {
                 // 17:29: the destroyed crate cell burns too; protect its drop for this wave.
                 addFlame(c, b.owner, blastId, waveId);
                 if (tile(c) == Tile::Soft) reveal(c, waveId);
-                if (b.kind != BombKind::Pierce) break;
+                // A regular blast breaks every soft block within its range;
+                // only hard walls stop the ray. Pierce keeps its distinct behavior elsewhere.
                 continue;
             }
             addFlame(c, b.owner, blastId, waveId);

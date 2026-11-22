@@ -11,11 +11,11 @@ GCC Release / CTest
 [PASS] 08 timed fuse is 2.5 seconds
 [PASS] 09 four rays and default radius one
 [PASS] 10 hard wall stops without flame
-[PASS] 11 soft block breaks and stops ray
+[NOT RUN] 11 range blast breaks every soft block until a hard wall
 [PASS] 12 flames expire after half second
 [PASS] 13 BFS bomb queue detonates A B C D immediately
 [PASS] 14 duplicate queue requests explode only once
-[PASS] 15 simultaneous rays do not tunnel through broken crates
+[NOT RUN] 15 simultaneous rays break and pass through soft blocks
 [PASS] 16 bomb ray stops at another bomb
 [PASS] 17 invalid owner and out-of-bounds placement safe
 [PASS] 18 enemy movement constant velocity
