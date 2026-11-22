@@ -67,7 +67,7 @@ struct Flame {
     float ttl = FlameTime;
     int owner = 0, blastId = 0;
 };
-struct Pickup { Cell cell; Item item = Item::None; };
+struct Pickup { Cell cell; Item item = Item::None; float age = 0.f; };
 struct Input {
     std::array<Direction, 2> move{Direction::None, Direction::None};
     std::array<bool, 2> place{false, false};
@@ -104,6 +104,7 @@ public:
     void cycleBomb(int playerId);
     void explodeBombs(const std::vector<int>& ids);
     std::vector<Cell> shortestPath(Cell from, Cell to, int maxDistance = 8) const;
+    std::array<int, Width * Height> distanceMap(Cell from, int maxDistance = 8) const;
     bool passable(Cell cell, int playerId = -1) const;
     bool exitOpen() const;
     int aliveEnemies() const;

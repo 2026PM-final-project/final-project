@@ -8,6 +8,8 @@
 
 # IDE and CMake local state
 /.vs/
+*.vcxproj.user
+*.suo
 CMakeUserPresets.json
 CMakeCache.txt
 CMakeFiles/

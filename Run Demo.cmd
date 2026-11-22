@@ -1,10 +1,4 @@
 @echo off
 cd /d "%~dp0"
-if not exist "build\BombermanDemo.exe" (
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0build.ps1"
-    if errorlevel 1 (
-        pause
-        exit /b 1
-    )
-)
-start "" "build\BombermanDemo.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run.ps1"
+if errorlevel 1 pause

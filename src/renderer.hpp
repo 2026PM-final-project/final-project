@@ -15,6 +15,8 @@
 namespace bomber {
 struct View {
     bool menu = true, help = false, paths = false, muted = false, ranking = false;
+    bool retro = true;
+    float readyTime = 0.f;
     int scene = -1;
     float time = 0;
     std::vector<RankEntry> ranks;
@@ -29,9 +31,16 @@ public:
 private:
     HDC dc = nullptr;
     HGLRC context = nullptr;
-    GLuint fonts[3]{}, textures[3]{};
+    GLuint fonts[3]{}, textures[3]{}, retroTextures[12]{};
+    std::array<std::array<int, 128>, 3> fontWidths{};
     int width = 1280, height = 900;
     bool createFonts();
+    void initRetro();
+    void retroBoard(const Game& game, const View& view);
+    void retroHud(const Game& game, const View& view);
+    void retroOverlay(const Game& game, const View& view);
+    void centered(float x, float y, const std::string& str, int font,
+                  float r, float g, float b);
     void ui();
     void board(const Game& game, const View& view);
     void hud(const Game& game, const View& view);

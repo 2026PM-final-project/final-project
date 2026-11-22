@@ -91,6 +91,7 @@ bool Renderer::initialize(HWND window) {
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,64,64,0,GL_RGB,GL_UNSIGNED_BYTE,pixels.data());
     }
+    initRetro();
     glEnable(GL_NORMALIZE); glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -103,9 +104,10 @@ bool Renderer::createFonts() {
         int pixels=std::max(8,int(std::round(sizes[i]*scale)));
         HFONT font=CreateFontA(-pixels,0,0,0,i==0?FW_NORMAL:FW_BOLD,FALSE,FALSE,FALSE,
                               ANSI_CHARSET,OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,
-                              DEFAULT_PITCH,"Segoe UI");
+                              DEFAULT_PITCH,i==2?"Arial":"Consolas");
         auto old=SelectObject(dc,font);GLuint replacement=glGenLists(128);
         BOOL ok=wglUseFontBitmapsA(dc,0,128,replacement);
+        GetCharWidth32A(dc,0,127,fontWidths[i].data());
         SelectObject(dc,old);DeleteObject(font);
         if(!ok){glDeleteLists(replacement,128);return false;}
         if(fonts[i])glDeleteLists(fonts[i],128);
@@ -121,6 +123,7 @@ void Renderer::resize(int w,int h) {
 void Renderer::shutdown() {
     if(context) {
         for(GLuint font : fonts) if(font) glDeleteLists(font,128);
+        glDeleteTextures(12,retroTextures);
         glDeleteTextures(3,textures); wglMakeCurrent(nullptr,nullptr); wglDeleteContext(context);context=nullptr;
     }
     if(dc) { ReleaseDC(WindowFromDC(dc),dc);dc=nullptr; }
@@ -320,13 +323,13 @@ void Renderer::overlay(const Game& game,const View& view) {
     }
     if(view.help) {
         panel(150,208,740,553,.055f,.095f,.14f);text(182,262,"FIELD MANUAL",2);
-        const char* rows[]={"P1    WASD move / Space bomb / Q type / E remote trigger",
+        const char* rows[]={"P1 WASD (solo: also Arrows) / Space bomb / Q type / E remote",
             "P2    Arrows move / Enter bomb / Right Ctrl type / Shift trigger",
-            "P      Pause       M sound       R restart       Esc title screen",
+            "P pause / N or M sound / F4 new run / Esc title / R ranking",
             "F2    Magenta BFS path: shortest route only within 8 cells",
             "F3    Next lab: Chain > Chase > Items > Exit > Specials > Life",
             "F4    Return to campaign       F5 save BMP screenshot",
-            "Crates hide FIRE (+range), BOMB (+capacity), SPEED (+velocity).",
+            "Crates hide FIRE (1->2), BOMB (+capacity), SPEED (+velocity).",
             "Your own flames hurt. Newly revealed items survive that blast.",
             "PIERCE crosses crates. REMOTE waits for E or another flame.",
             "Orange roams / Magenta chases / Steel has 2 HP / Cyan is fast.",
@@ -349,12 +352,18 @@ void Renderer::overlay(const Game& game,const View& view) {
     std::string title=game.phase==Phase::Paused?"TAKE A BREATHER":game.phase==Phase::GameOver?"OUT OF SPARKS":game.phase==Phase::Victory?"ALL SYSTEMS CLEAR":"STAGE COMPLETE";
     text(238,388,title,2,.94f,.85f,.59f);
     text(238,437,"SCORE  "+paddedScore(game.score),1);
-    std::string action=game.phase==Phase::Paused?"P / RESUME":game.phase==Phase::StageClear?(game.practice?"F3 / NEXT LAB":"ENTER / NEXT STAGE"):"R / NEW RUN     TAB / RANKING";
+    std::string action=game.phase==Phase::Paused?"P / RESUME":game.phase==Phase::StageClear?(game.practice?"F3 / NEXT LAB":"ENTER / NEXT STAGE"):"SPACE / NEW RUN     R / RANKING";
     text(238,500,action,0,.3f,.92f,.74f);
 }
 void Renderer::draw(const Game& game,const View& view) {
     glClearColor(.025f,.042f,.065f,1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    ui();hud(game,view);board(game,view);ui();overlay(game,view);SwapBuffers(dc);
+    ui();
+    if(view.retro) {retroHud(game,view);retroBoard(game,view);retroOverlay(game,view);}
+    else {
+        hud(game,view);board(game,view);ui();overlay(game,view);
+        if(view.readyTime>0)retroOverlay(game,view);
+    }
+    SwapBuffers(dc);
 }
 
 // [09] Actual front-buffer capture; useful for a portable presentation artifact.

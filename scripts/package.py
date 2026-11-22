@@ -6,7 +6,8 @@ import zipfile
 root = Path(__file__).resolve().parents[1]
 required = [
     "README.md", "final_project.pdf", "Run Demo.cmd", "build.ps1",
-    "CMakeLists.txt", ".gitignore", "build/BombermanDemo.exe", "build/bomber_tests.exe",
+    "CMakeLists.txt", ".gitignore", "run.ps1", "Bomberman.sln",
+    "BombermanDemo.vcxproj", "bomber_tests.vcxproj", "build/BombermanDemo.exe", "build/bomber_tests.exe",
 ]
 paths = [root / name for name in required]
 for folder in ["src", "tests", "scripts", "docs"]:
