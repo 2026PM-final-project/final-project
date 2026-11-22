@@ -430,9 +430,9 @@ int main() {
         require(g.bombs[0].range==2);at(g.players[0],{1,1});g.explodeBombs({2});
         require(fireAt(g,{8,5})&&!fireAt(g,{9,5}));
     });
-    test("67 repeated fire pickup stays at range two in a normal run",[]{
+    test("67 each fire pickup adds one range in a normal run",[]{
         auto g=empty();g.items={{{1,1},Item::Fire},{{1,1},Item::Fire},{{1,1},Item::Fire}};
-        g.resolveContacts();require(g.players[0].range==2&&g.score==150);
+        g.resolveContacts();require(g.players[0].range==4&&g.score==150);
     });
     test("68 BFS distance overlay includes full area up to eight cells",[]{
         auto g=empty();auto dist=g.distanceMap({1,1},8);

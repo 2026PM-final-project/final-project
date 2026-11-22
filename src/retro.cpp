@@ -189,7 +189,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
         card(top,game.players.size()==2?144.f:163.f);
         text(862,top+31,"P"+std::to_string(player.id+1)+" / "+bombName(player.selected),1,player.id?.35f:.25f,.7f,1);
         int active=0;for(const auto& bomb:game.bombs)if(bomb.owner==player.id)++active;
-        text(862,top+65,"FIRE "+std::to_string(player.range)+(player.range==2?"  MAX":""),0,1,.65f,.35f);
+        text(862,top+65,"FIRE "+std::to_string(player.range),0,1,.65f,.35f);
         text(862,top+94,"BOMBS "+std::to_string(active)+" / "+std::to_string(player.capacity),0,.75f,.82f,1);
         std::ostringstream speed;speed<<std::fixed<<std::setprecision(2)<<player.speed();
         text(862,top+123,"SPEED "+speed.str()+"  LV "+std::to_string(player.speedLevel),0,.62f,.84f,.46f);

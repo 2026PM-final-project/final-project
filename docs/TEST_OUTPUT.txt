@@ -64,7 +64,7 @@
 [PASS] 64 chaser follows BFS while normal enemy ignores nearby player
 [PASS] 65 chaser outside BFS radius falls back to straight motion
 [PASS] 66 bomb reveals fire pickup and next bomb reaches exactly two cells
-[PASS] 67 repeated fire pickup stays at range two in a normal run
+[NOT RUN] 67 each fire pickup adds one range in a normal run
 [PASS] 68 BFS distance overlay includes full area up to eight cells
 [PASS] 69 BFS distance overlay respects walls bombs and invalid origins
 [PASS] 70 visible item pop timer advances in play and freezes on pause

@@ -396,7 +396,7 @@ void Game::resolveContacts() {
             });
             if (burning) { it = items.erase(it); continue; }
             if (!touches(p, it->cell, .12f)) { ++it; continue; }
-            if (it->item == Item::Fire) { p.range = std::max(p.range, 2); ++p.fireItemsCollected; }
+            if (it->item == Item::Fire) { ++p.range; ++p.fireItemsCollected; }
             if (it->item == Item::Bomb) { ++p.capacity; ++p.bombItemsCollected; }
             if (it->item == Item::Speed) { ++p.speedLevel; ++p.speedItemsCollected; }
             score += 50; events.push_back(Event::Pickup); it = items.erase(it);
