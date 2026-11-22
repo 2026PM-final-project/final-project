@@ -2,6 +2,7 @@
 #define NOMINMAX
 #include <windows.h>
 #include "audio.hpp"
+#include "movement.hpp"
 #include "renderer.hpp"
 #include "scores.hpp"
 #include <algorithm>
@@ -65,15 +66,14 @@ struct Application {
         const int keys[2][4]={{'W','S','A','D'},{VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT}};
         const Direction dirs[]={Direction::Up,Direction::Down,Direction::Left,Direction::Right};
         for(int p=0;p<count;++p) {
-            for(int d=0;d<4;++d)if(tap(keys[p][d]))buffered[p]=dirs[d];
-            Direction moving=Direction::None;
-            for(int d=0;d<4;++d)if(held[keys[p][d]])moving=dirs[d];
-            auto& actor=game.players[p];
-            if(buffered[p]!=Direction::None&&actor.centered()&&
-               game.passable(offset(actor.cell(),buffered[p]),p)) {
-                moving=buffered[p];buffered[p]=Direction::None;
+            Direction pressedMove=Direction::None,heldMove=Direction::None;
+            for(int d=0;d<4;++d) {
+                if(tap(keys[p][d]))pressedMove=dirs[d];
+                if(held[keys[p][d]])heldMove=dirs[d];
             }
-            input.move[p]=moving;
+            auto& actor=game.players[p];
+            input.move[p]=resolveMovement(buffered[p],pressedMove,heldMove,firstStep,actor,
+                [&](Direction direction) {return game.passable(offset(actor.cell(),direction),p);});
         }
         if(firstStep) {
             input.place[0]=tap(VK_SPACE);input.remote[0]=tap('E');

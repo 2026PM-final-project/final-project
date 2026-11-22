@@ -151,6 +151,7 @@ flowchart LR
 - 논리 맵은 정수 격자이고, 캐릭터 위치는 실수입니다. `(x+.5, y+.5)`가 칸 중심입니다.
 - `travel`과 `target`으로 한 칸의 이동 구간을 표현합니다. 매 틱 `speed × dt`만큼 이동하며 목표점까지의 남은 거리를 넘지 않습니다. 남는 거리는 다음 구간에서 처리합니다.
 - 방향 전환은 칸 중심에서 합니다. 플레이어의 다음 방향키 입력은 `buffered`에 보관해 중심에 도착했을 때 적용합니다. 대각선 이동과 벽 모서리 관통을 방지합니다.
+- 새 키 입력은 렌더 프레임의 **첫 물리 틱에서만** 버퍼에 저장합니다. 한 프레임에 2·4·8개의 물리 틱이 실행돼도 같은 입력을 다시 저장하지 않습니다. 짧게 한 번 누르면 한 칸 이동하고, 계속 누르면 등속으로 연속 이동합니다. 키를 놓으면 진행 중인 칸의 중심까지 이동한 뒤 멈춥니다. 입력 회귀 테스트 T59~62로 1인·2인 모두 확인합니다.
 - 다음 칸이 벽이나 폭탄이면 구간을 시작하지 않습니다. 이미 이동 중인데 목표 칸에 새 폭탄이 생기면 직전 중심 방향으로 되돌립니다.
 - 설치 직후 폭탄과 겹친 플레이어에게만 `passMask` 비트로 임시 통행 권한을 줍니다. 몸이 폭탄 칸을 완전히 벗어나면 권한을 지워 재진입을 막습니다.
 - 캐릭터와 화염/아이템 접촉은 원과 칸 AABB의 최근접점 거리로 판단합니다. 적과 플레이어는 두 중심 간 거리로 판단합니다. 몸의 반경까지 고려하므로 단순히 같은 칸인지 비교하는 것보다 자연스럽습니다.
@@ -238,11 +239,13 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/game.cpp](src/game.cpp#L312) / [07] | L312~345 | 폭발 큐·중복 제거·벽 스냅샷·네 방향 전파·즉시 연쇄반응 |
 | [src/game.cpp](src/game.cpp#L346) / [08] | L346~411 | 접촉 기하, 적 피해, 팀 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
 | [src/game.cpp](src/game.cpp#L412) / [09] | L412~442 | 고정 틱 갱신 순서, 타이머·도화선·정지, 이벤트 수거 |
-| [src/main.cpp](src/main.cpp) / 공통 선언 | L1~14 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/main.cpp](src/main.cpp#L15) / [01] | L15~61 | 앱 소유권, 시작·메뉴·도움말·시연·폭탄 종류·캡처 명령 |
-| [src/main.cpp](src/main.cpp#L62) / [02] | L62~94 | 키 누름/유지 분리, 방향 버퍼, 틱 입력, 기록 저장 조건 |
+| [src/main.cpp](src/main.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [src/main.cpp](src/main.cpp#L16) / [01] | L16~62 | 앱 소유권, 시작·메뉴·도움말·시연·폭탄 종류·캡처 명령 |
+| [src/main.cpp](src/main.cpp#L63) / [02] | L63~94 | 키 누름/유지 분리, 방향 버퍼, 틱 입력, 기록 저장 조건 |
 | [src/main.cpp](src/main.cpp#L95) / [03] | L95~139 | Win32 창 메시지, 키 재입력 방지, 좌우 Ctrl/Shift 구분, 포커스 상실 처리 |
 | [src/main.cpp](src/main.cpp#L140) / [04] | L140~186 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
+| [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
 | [src/renderer.hpp](src/renderer.hpp) | L1~43 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
 | [src/renderer.cpp](src/renderer.cpp) / 공통 선언 | L1~9 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/renderer.cpp](src/renderer.cpp#L10) / [01] | L10~57 | 면 법선·UV가 있는 상자, 구의 법선, 바닥 그림자 |
@@ -264,16 +267,17 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/scores.cpp](src/scores.cpp) / 공통 선언 | L1~17 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/scores.cpp](src/scores.cpp#L18) / [01] | L18~43 | 손상된 기록 검증, 상위 10개 정렬·읽기 |
 | [src/scores.cpp](src/scores.cpp#L44) / [02] | L44~70 | 임시 파일 완성 후 교체, 기존 파일 보존, 로컬 날짜 생성 |
-| [tests/test_game.cpp](tests/test_game.cpp) / 공통 선언 | L1~12 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [tests/test_game.cpp](tests/test_game.cpp#L13) / [01] | L13~48 | 테스트 하네스·실패 집계·독립 빈 맵·시간 진행 도우미 |
-| [tests/test_game.cpp](tests/test_game.cpp#L49) / [02] | L49~126 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
-| [tests/test_game.cpp](tests/test_game.cpp#L127) / [03] | L127~209 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
-| [tests/test_game.cpp](tests/test_game.cpp#L210) / [04] | L210~340 | T37~58: 아이템·단계·특수 폭탄·협동·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
+| [tests/test_game.cpp](tests/test_game.cpp) / 공통 선언 | L1~13 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [tests/test_game.cpp](tests/test_game.cpp#L14) / [01] | L14~49 | 테스트 하네스·실패 집계·독립 빈 맵·시간 진행 도우미 |
+| [tests/test_game.cpp](tests/test_game.cpp#L50) / [02] | L50~127 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
+| [tests/test_game.cpp](tests/test_game.cpp#L128) / [03] | L128~210 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
+| [tests/test_game.cpp](tests/test_game.cpp#L211) / [04] | L211~339 | T37~58: 아이템·단계·특수 폭탄·협동·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
+| [tests/test_game.cpp](tests/test_game.cpp#L340) / [05] | L340~402 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·2인 입력 회귀 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~25 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~10 | 실행 파일 시작, 파일이 없으면 빌드 후 실행 |
 | [scripts/package.py](scripts/package.py) | L1~33 | 검증된 소스·문서·실행 파일 묶기, ZIP 무결성 검사·SHA256 |
-| [scripts/update_code_map.py](scripts/update_code_map.py) | L1~67 | README 영역·함수 줄 번호 자동 갱신 |
+| [scripts/update_code_map.py](scripts/update_code_map.py) | L1~68 | README 영역·함수 줄 번호 자동 갱신 |
 
 ### 함수 찾기
 
@@ -355,6 +359,7 @@ final_project/
   CMakeLists.txt             GCC/MSVC용 대체 빌드
   src/
     game.hpp / game.cpp      플랫폼 독립 게임 규칙
+    movement.hpp             프레임별 이동 입력·회전 버퍼
     renderer.hpp / .cpp      Win32 OpenGL 화면
     audio.hpp / .cpp         PCM 배경 음악·효과음
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체

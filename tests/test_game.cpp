@@ -1,4 +1,5 @@
 #include "game.hpp"
+#include "movement.hpp"
 #include "scores.hpp"
 #include <algorithm>
 #include <cmath>
@@ -334,6 +335,67 @@ int main() {
             for(const auto& e:g.enemies)if(e.alive)require(g.tile(e.cell())==Tile::Floor);
             for(const auto& p:g.players)require(g.tile(p.cell())==Tile::Floor);
         }
+    });
+
+    // [05] The actual input resolver must consume each render-frame press once.
+    test("59 one tap moves one cell with multiple physics ticks per render",[]{
+        for(int substeps:{1,2,4,8})for(bool releasedBeforeFrame:{false,true}) {
+            auto g=empty();Direction buffered=Direction::None;
+            for(int tick=0;tick<substeps+160;++tick) {
+                Input input;bool pressFrame=tick<substeps;
+                input.move[0]=resolveMovement(buffered,
+                    pressFrame?Direction::Right:Direction::None,
+                    pressFrame&&!releasedBeforeFrame?Direction::Right:Direction::None,
+                    tick%substeps==0,g.players[0],
+                    [&](Direction direction){return g.passable(offset(g.players[0].cell(),direction),0);});
+                g.update(FixedStep,input);
+            }
+            require(near(g.players[0].x,2.5f)&&near(g.players[0].y,1.5f),
+                    "tap repeated with "+std::to_string(substeps)+" physics ticks per render");
+            require(buffered==Direction::None&&g.players[0].travel==Direction::None);
+        }
+    });
+    test("60 held direction still moves continuously at normal speed",[]{
+        auto g=empty();Direction buffered=Direction::None;
+        for(int tick=0;tick<200;++tick) {
+            Input input;
+            input.move[0]=resolveMovement(buffered,
+                tick<2?Direction::Right:Direction::None,
+                tick<120?Direction::Right:Direction::None,
+                tick%2==0,g.players[0],
+                [&](Direction direction){return g.passable(offset(g.players[0].cell(),direction),0);});
+            g.update(FixedStep,input);
+        }
+        require(near(g.players[0].x,4.5f)&&near(g.players[0].y,1.5f));
+        require(g.players[0].travel==Direction::None);
+    });
+    test("61 a short perpendicular press stays buffered until the next center",[]{
+        auto g=empty();Direction buffered=Direction::None;
+        for(int tick=0;tick<180;++tick) {
+            Direction pressed=tick<2?Direction::Right:tick>=10&&tick<12?Direction::Down:Direction::None;
+            Direction held=tick<2?Direction::Right:Direction::None;
+            Input input;
+            input.move[0]=resolveMovement(buffered,pressed,held,tick%2==0,g.players[0],
+                [&](Direction direction){return g.passable(offset(g.players[0].cell(),direction),0);});
+            g.update(FixedStep,input);
+        }
+        require(near(g.players[0].x,2.5f)&&near(g.players[0].y,2.5f));
+        require(buffered==Direction::None&&g.players[0].travel==Direction::None);
+    });
+    test("62 co-op taps each move exactly one cell independently",[]{
+        auto g=empty(2);
+        std::array<Direction,2> buffered{Direction::None,Direction::None};
+        for(int tick=0;tick<180;++tick) {
+            Input input;
+            for(int player=0;player<2;++player) {
+                Direction pressed=tick<2?(player==0?Direction::Right:Direction::Left):Direction::None;
+                input.move[player]=resolveMovement(buffered[player],pressed,pressed,tick%2==0,g.players[player],
+                    [&](Direction direction){return g.passable(offset(g.players[player].cell(),direction),player);});
+            }
+            g.update(FixedStep,input);
+        }
+        require(near(g.players[0].x,2.5f)&&near(g.players[1].x,12.5f));
+        require(buffered[0]==Direction::None&&buffered[1]==Direction::None);
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;

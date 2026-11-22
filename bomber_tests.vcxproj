@@ -12,6 +12,6 @@
   <PropertyGroup><OutDir>build-vs\$(Configuration)\</OutDir><IntDir>build-vs\obj\bomber_tests\$(Platform)\$(Configuration)\</IntDir></PropertyGroup>
   <ItemDefinitionGroup><ClCompile><WarningLevel>Level4</WarningLevel><SDLCheck>true</SDLCheck><LanguageStandard>stdcpp17</LanguageStandard><ConformanceMode>true</ConformanceMode><AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions><AdditionalIncludeDirectories>src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PrecompiledHeader>NotUsing</PrecompiledHeader><PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Console</SubSystem><GenerateDebugInformation>true</GenerateDebugInformation></Link></ItemDefinitionGroup>
   <ItemGroup><ClCompile Include="tests\test_game.cpp" /><ClCompile Include="src\game.cpp" /><ClCompile Include="src\scores.cpp" /></ItemGroup>
-  <ItemGroup><ClInclude Include="src\game.hpp" /><ClInclude Include="src\scores.hpp" /></ItemGroup>
+  <ItemGroup><ClInclude Include="src\movement.hpp" /><ClInclude Include="src\game.hpp" /><ClInclude Include="src\scores.hpp" /></ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

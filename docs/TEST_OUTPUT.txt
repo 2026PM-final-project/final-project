@@ -56,4 +56,8 @@
 [PASS] 56 live item cannot be collected from a burning cell
 [PASS] 57 newly placed bomb blocks an enemy's in-progress segment
 [PASS] 58 simulation soak keeps actors out of static obstacles
-58 passed, 0 failed
+[PASS] 59 one tap moves one cell with multiple physics ticks per render
+[PASS] 60 held direction still moves continuously at normal speed
+[PASS] 61 a short perpendicular press stays buffered until the next center
+[PASS] 62 co-op taps each move exactly one cell independently
+62 passed, 0 failed
