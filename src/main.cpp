@@ -26,10 +26,11 @@ struct Application {
     std::filesystem::path directory;
 
     void start(int players) {
-        count=players;game.newGame(count);recorded=false;view.menu=false;view.scene=-1;
+        count=std::clamp(players,1,2);game.newGame(count);recorded=false;view.menu=false;view.scene=-1;
         view.help=false;view.ranking=false;view.readyTime=1.2f;buffered.fill(Direction::None);
     }
     bool tap(int key) {return key>=0&&key<256&&pressed[key];}
+    bool keyHeld(int key) const {return key>=0&&key<256&&held[key];}
     void commands() {
         if(tap(VK_F1)||tap('H')) {view.help=!view.help;view.ranking=false;}
         if(tap(VK_F2))view.paths=!view.paths;
@@ -76,11 +77,11 @@ struct Application {
         Input input;
         const int keys[2][4]={{'W','S','A','D'},{VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT}};
         const Direction dirs[]={Direction::Up,Direction::Down,Direction::Left,Direction::Right};
-        for(int p=0;p<count;++p) {
+        for(int p=0;p<count&&p<2;++p) {
             Direction pressedMove=Direction::None,heldMove=Direction::None;
             for(int d=0;d<4;++d) {
-                bool edge=tap(keys[p][d]),down=held[keys[p][d]];
-                if(count==1) {edge=edge||tap(keys[1][d]);down=down||held[keys[1][d]];}
+                bool edge=tap(keys[p][d]),down=keyHeld(keys[p][d]);
+                if(count==1) {edge=edge||tap(keys[1][d]);down=down||keyHeld(keys[1][d]);}
                 if(edge)pressedMove=dirs[d];
                 if(down)heldMove=dirs[d];
             }

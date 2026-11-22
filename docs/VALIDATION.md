@@ -73,3 +73,4 @@
 
 - 최종 소스로 Visual Studio 솔루션의 x64 Debug·Release를 모두 빌드했고, 각 구성의 게임 규칙 70개가 통과했다.
 - 실행 스크립트의 `-NoLaunch`로 현재 소스보다 새 실행 파일이 선택되는지 확인했다.
+- 유지 입력의 키 코드 범위와 최대 플레이어 수(2명)를 명시했다. GCC -O2 -Wall -Wextra -Wpedantic -Werror로 실제 입력 소스가 경고 없이 컴파일된다.

@@ -246,10 +246,10 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/game.cpp](src/game.cpp#L413) / [09] | L413~444 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
 | [src/game.cpp](src/game.cpp#L445) / [10] | L445~464 | F2 표시용 전체 8칸 BFS 거리 지도 |
 | [src/main.cpp](src/main.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/main.cpp](src/main.cpp#L16) / [01] | L16~73 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
-| [src/main.cpp](src/main.cpp#L74) / [02] | L74~107 | 방향키/WASD 1인 별칭·2인 키 분리, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
-| [src/main.cpp](src/main.cpp#L108) / [03] | L108~153 | Win32 창 메시지, 키 재입력 방지, 좌우 Ctrl/Shift 구분, 포커스 상실 처리 |
-| [src/main.cpp](src/main.cpp#L154) / [04] | L154~223 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
+| [src/main.cpp](src/main.cpp#L16) / [01] | L16~74 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
+| [src/main.cpp](src/main.cpp#L75) / [02] | L75~108 | 방향키/WASD 1인 별칭·2인 키 분리, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
+| [src/main.cpp](src/main.cpp#L109) / [03] | L109~154 | Win32 창 메시지, 키 재입력 방지, 좌우 Ctrl/Shift 구분, 포커스 상실 처리 |
+| [src/main.cpp](src/main.cpp#L155) / [04] | L155~224 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
 | [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
 | [src/renderer.hpp](src/renderer.hpp) | L1~52 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
