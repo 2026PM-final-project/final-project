@@ -31,14 +31,15 @@ public:
 private:
     HDC dc = nullptr;
     HGLRC context = nullptr;
-    GLuint fonts[3]{}, textures[3]{}, retroTextures[12]{};
-    std::array<std::array<int, 128>, 3> fontWidths{};
+    GLuint fonts[4]{}, textures[3]{}, retroTextures[12]{};
+    std::array<std::array<int, 128>, 4> fontWidths{};
     int width = 1280, height = 900;
     bool createFonts();
     void initRetro();
     void retroBoard(const Game& game, const View& view);
     void retroHud(const Game& game, const View& view);
     void retroOverlay(const Game& game, const View& view);
+    void retroTitleScreen();
     void centered(float x, float y, const std::string& str, int font,
                   float r, float g, float b);
     void ui();

@@ -109,6 +109,7 @@ void Game::loadStage(int number, bool keepAbilities) {
     buildArena(baseSeed + unsigned(stage) * 7919);
     if (!keepAbilities) for (auto& p : players) {
         p.range = 1; p.capacity = 1; p.speedLevel = 0; p.selected = BombKind::Normal;
+        p.fireItemsCollected = p.bombItemsCollected = p.speedItemsCollected = 0;
     }
     auto add = [&](Cell c, EnemyKind kind) {
         Enemy e; e.spawn = c; e.kind = kind; e.hp = kind == EnemyKind::Armored ? 2 : 1;
@@ -395,9 +396,9 @@ void Game::resolveContacts() {
             });
             if (burning) { it = items.erase(it); continue; }
             if (!touches(p, it->cell, .12f)) { ++it; continue; }
-            if (it->item == Item::Fire) p.range = std::max(p.range, 2);
-            if (it->item == Item::Bomb) ++p.capacity;
-            if (it->item == Item::Speed) ++p.speedLevel;
+            if (it->item == Item::Fire) { p.range = std::max(p.range, 2); ++p.fireItemsCollected; }
+            if (it->item == Item::Bomb) { ++p.capacity; ++p.bombItemsCollected; }
+            if (it->item == Item::Speed) { ++p.speedLevel; ++p.speedItemsCollected; }
             score += 50; events.push_back(Event::Pickup); it = items.erase(it);
         }
         if (exitOpen() && p.cell() == exit) {

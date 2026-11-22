@@ -43,6 +43,7 @@ struct Actor {
 };
 struct Player : Actor {
     int id = 0, range = 1, capacity = 1, speedLevel = 0;
+    int fireItemsCollected = 0, bombItemsCollected = 0, speedItemsCollected = 0;
     BombKind selected = BombKind::Normal;
     float invincible = 0.f;
     float speed() const { return 3.f + .45f * speedLevel; }

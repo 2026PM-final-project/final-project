@@ -209,7 +209,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     text(74,852,"LIVES "+std::to_string(game.lives),0,.76f,.80f,.9f);
     const auto& player=game.players.front();
     const char* labels[]={"F","B","S"};
-    int values[]={player.range,player.capacity,player.speedLevel+1};
+    int values[]={player.fireItemsCollected,player.bombItemsCollected,player.speedItemsCollected};
     Color colors[]={{.89f,.36f,.22f},{.24f,.42f,.88f},{.39f,.73f,.31f}};
     for(int i=0;i<3;++i) {
         float x=340.f+i*130;rect(x,800,31,31,colors[i]);border(x,800,31,31,{.85f,.85f,.85f});
@@ -222,6 +222,52 @@ void Renderer::retroHud(const Game& game,const View& view) {
     std::string note=view.menu?"SPACE / START   2 / CO-OP   ARROWS OR WASD / MOVE":game.notice;
     if(note.size()>77)note.resize(77);
     text(66,890,note,0,.78f,.78f,.53f);
+}
+
+// [05] The home screen recreates the original title-card composition with a live-style sample arena.
+void Renderer::retroTitleScreen() {
+    rect(0,0,1280,900,{0,0,0});
+
+    const std::string logo="BOMBERMAN";
+    for(int y=-3;y<=3;y+=3)for(int x=-3;x<=3;x+=3)
+        if(x||y)centered(640.f+static_cast<float>(x),201.f+static_cast<float>(y),logo,3,.17f,.08f,.31f);
+    centered(640,201,logo,3,1.f,.47f,.10f);
+
+    constexpr int cols=15,rows=7;
+    constexpr float tile=66.f,left=(1280-cols*tile)*.5f,top=274.f;
+    bool hard[rows][cols]{},soft[rows][cols]{};
+    for(int x=0;x<cols;++x){hard[0][x]=true;hard[rows-1][x]=true;}
+    for(int y=0;y<rows;++y){hard[y][0]=true;hard[y][cols-1]=true;}
+    for(int y:{2,4})for(int x:{2,4,6,8,10,12})hard[y][x]=true;
+    for(int x:{3,5,9,11}){soft[1][x]=true;soft[5][x]=true;}
+    for(int y:{2,4})for(int x:{1,7,13})soft[y][x]=true;
+    for(int y=0;y<rows;++y)for(int x=0;x<cols;++x) {
+        float px=left+x*tile,py=top+y*tile;
+        Color tint=(x+y)%2?Color{.87f,.93f,.91f}:Color{1,1,1};
+        texture(retroTextures[0],px,py,tile,tile,tint);
+        if(hard[y][x])texture(retroTextures[1],px,py,tile,tile,{1,1,1});
+        else if(soft[y][x])texture(retroTextures[2],px,py,tile,tile,{1,1,1});
+    }
+    auto actor=[&](int x,int y,int sprite,float size) {
+        float cx=left+(x+.5f)*tile,cy=top+(y+.5f)*tile;
+        texture(retroTextures[sprite],cx-size*.5f,cy-size*.5f,size,size,{1,1,1});
+        rect(cx-10,cy-6,6,8,White);rect(cx+5,cy-6,6,8,White);
+    };
+    actor(2,1,4,53);       // orange enemy
+    actor(6,1,5,53);       // purple chaser
+    actor(3,3,3,56);       // blue bomber
+    actor(13,5,4,53);      // second orange enemy
+    auto bomb=[&](int x,int sprite) {
+        float cx=left+(x+.5f)*tile,cy=top+3.5f*tile;
+        texture(retroTextures[sprite],cx-25,cy-25,50,50,{1,1,1});
+        rect(cx+11,cy-27,9,4,Gold);
+    };
+    bomb(2,6);for(int x:{4,6,8,10,12})bomb(x,8);
+
+    centered(640,784,"Press 'Space bar' to start",1,.90f,.94f,.37f);
+    centered(640,830,"1: SOLO       2: LOCAL CO-OP",0,.96f,.96f,.92f);
+    centered(640,856,"H / F1: HELP       R / TAB: SCORE BOARD",0,.93f,.93f,.90f);
+    centered(640,882,"N / M: SOUND ON / OFF",0,.93f,.93f,.90f);
 }
 
 // [04] Home and stage-ready screens freeze the same continuous simulation.
