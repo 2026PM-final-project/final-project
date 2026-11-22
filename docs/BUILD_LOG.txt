@@ -1,0 +1,61 @@
+[PASS] 01 start upper-left, defaults and concealed exit
+[PASS] 02 cardinal velocity and time-step consistency
+[PASS] 03 hard wall collision
+[PASS] 04 soft wall collision
+[PASS] 05 place at current cell and capacity one
+[PASS] 06 step off own bomb then block re-entry
+[PASS] 07 duplicate placement rejected
+[PASS] 08 timed fuse is 2.5 seconds
+[PASS] 09 four rays and default radius one
+[PASS] 10 hard wall stops without flame
+[PASS] 11 soft block breaks and stops ray
+[PASS] 12 flames expire after half second
+[PASS] 13 BFS bomb queue detonates A B C D immediately
+[PASS] 14 duplicate queue requests explode only once
+[PASS] 15 simultaneous rays do not tunnel through broken crates
+[PASS] 16 bomb ray stops at another bomb
+[PASS] 17 invalid owner and out-of-bounds placement safe
+[PASS] 18 enemy movement constant velocity
+[PASS] 19 enemies cannot pass blocks and bombs
+[PASS] 20 direction changes only at cell centers
+[PASS] 21 wanderer avoids U-turn unless dead end
+[PASS] 22 BFS returns a true shortest route around wall
+[PASS] 23 exactly eight cells chased; nine is outside radius
+[PASS] 24 BFS cannot walk through a bomb
+[PASS] 25 chaser follows first BFS edge
+[PASS] 26 distant chaser falls back to normal movement
+[PASS] 27 player's own flame costs one life
+[PASS] 28 enemy contact resets living actors to initial positions
+[PASS] 29 spawn protection prevents repeated immediate damage
+[PASS] 30 exactly zero lives ends the game
+[PASS] 31 ordinary enemy dies in flame and scores once
+[PASS] 32 defeated enemy does not respawn after player death
+[PASS] 33 exit revealed by destroying its covering crate
+[PASS] 34 revealed exit stays locked while enemies survive
+[PASS] 35 all enemies dead alone is insufficient for stage clear
+[PASS] 36 entering an open exit clears stage
+[PASS] 37 newly revealed item survives revealing blast
+[PASS] 38 fire / bomb / speed pickups modify independent abilities
+[PASS] 39 later flame destroys visible item
+[PASS] 40 capacity upgrade permits two active bombs
+[PASS] 41 stages preserve abilities, score and lives
+[PASS] 42 third stage open exit wins entire campaign
+[PASS] 43 piercing bomb crosses soft blocks but not hard walls
+[PASS] 44 remote bomb has no timed fuse; owner can trigger
+[PASS] 45 remote bomb participates in flame chain reaction
+[PASS] 46 co-op has independent capacities and ownership
+[PASS] 47 simultaneous co-op contact costs one shared life
+[PASS] 48 chaser targets nearest reachable co-op player
+[PASS] 49 armor takes two distinct blasts, not two flame frames
+[PASS] 50 swift enemy is faster but constant-speed
+[PASS] 51 pause freezes all clocks and bomb fuses
+[PASS] 52 all six labs are unranked with safe co-op spawn positions
+[PASS] 53 all stages guarantee every item and a hidden exit
+[PASS] 54 deterministic seed produces reproducible stages
+[PASS] 55 local rankings round-trip, sort, cap top ten, ignore broken rows
+[PASS] 56 live item cannot be collected from a burning cell
+[PASS] 57 newly placed bomb blocks an enemy's in-progress segment
+[PASS] 58 simulation soak keeps actors out of static obstacles
+
+58 passed, 0 failed
+Ready: build\BombermanDemo.exe

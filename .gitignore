@@ -1,0 +1,27 @@
+# Local build and packaging output
+/build/
+/build-*/
+/dist/
+/tmp/
+/out/
+/*.zip
+
+# IDE and CMake local state
+/.vs/
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+
+# Compiled files and Python cache
+*.exe
+*.obj
+*.o
+*.pdb
+*.ilk
+__pycache__/
+*.pyc
+
+# Per-player data and temporary captures
+*.tmp
+capture.bmp
+scores.tsv
