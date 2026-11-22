@@ -1,7 +1,9 @@
 #include "game.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <numeric>
 #include <queue>
 
 namespace bomber {
@@ -57,41 +59,134 @@ bool Game::inside(Cell c) { return c.x >= 0 && c.x < Width && c.y >= 0 && c.y < 
 int Game::index(Cell c) { return c.y * Width + c.x; }
 Tile Game::tile(Cell c) const { return inside(c) ? tiles[index(c)] : Tile::Hard; }
 void Game::setTile(Cell c, Tile t) { if (inside(c)) tiles[index(c)] = t; }
-Game::Game(unsigned seed) : random(seed), baseSeed(seed) { newGame(); }
+static unsigned freshSeed() {
+    std::random_device device;
+    const auto ticks = static_cast<std::uint64_t>(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    const std::uint64_t entropy = (std::uint64_t(device()) << 32) ^ device() ^ ticks ^ (ticks >> 29);
+    return static_cast<unsigned>(entropy ^ (entropy >> 32));
+}
+Game::Game() : Game(freshSeed(), true) {}
+Game::Game(unsigned seed) : Game(seed, false) {}
+Game::Game(unsigned seed, bool randomizeOnNewGame)
+    : random(seed), baseSeed(seed), randomizeSeedOnNewGame(randomizeOnNewGame) { newGame(); }
 
-// [02] Deterministic stage construction: lattice, connected lanes, safe spawns.
+static constexpr std::array<unsigned, 15> ArenaSeeds{{
+    0xA11CE001u, 0xB04B0107u, 0xC0FFEE13u, 0xD15EA5E9u, 0xE17E002Bu,
+    0xF10A5E31u, 0x1942B04Du, 0x2C7A91B3u, 0x35D4E807u, 0x46B19C21u,
+    0x57E3A64Fu, 0x68C20D95u, 0x79A5F123u, 0x8BD67109u, 0x9CE4285Bu
+}};
+static constexpr int ArenaCount = static_cast<int>(ArenaSeeds.size());
+
+// [02] One of 15 seeded arenas: randomized hard/soft blocks, drops and exit.
 void Game::buildArena(unsigned seed) {
     random.seed(seed);
     hidden.fill(Item::None);
     for (int y = 0; y < Height; ++y) for (int x = 0; x < Width; ++x) {
         Cell c{x, y};
-        bool hard = x == 0 || y == 0 || x == Width - 1 || y == Height - 1 ||
-                    (x % 2 == 0 && y % 2 == 0);
-        setTile(c, hard ? Tile::Hard : Tile::Floor);
-        // Odd rows and columns form a connected graph once soft blocks are cleared.
-        if (!hard && random() % 100 < unsigned(43 + stage * 3)) setTile(c, Tile::Soft);
+        bool border = x == 0 || y == 0 || x == Width - 1 || y == Height - 1;
+        setTile(c, border ? Tile::Hard : Tile::Floor);
     }
-    for (Cell spawn : {Cell{1, 1}, Cell{13, 11}, Cell{13, 1}, Cell{1, 11}, Cell{7, 7}}) {
-        setTile(spawn, Tile::Floor);
-        for (auto d : Directions) if (tile(offset(spawn, d)) != Tile::Hard)
-            setTile(offset(spawn, d), Tile::Floor);
+
+    const std::array<Cell, 5> spawns{{{1,1},{13,11},{13,1},{1,11},{7,7}}};
+    auto inSafeZone = [&](Cell c) {
+        for (Cell spawn : spawns)
+            if (std::abs(c.x-spawn.x)+std::abs(c.y-spawn.y) <= 1) return true;
+        return false;
+    };
+    std::vector<Cell> hardChoices;
+    for (int y=1;y<Height-1;++y) for(int x=1;x<Width-1;++x) {
+        Cell c{x,y}; if(!inSafeZone(c)) hardChoices.push_back(c);
     }
-    // Guarantee each advanced item rather than relying on random drops.
-    const Cell guaranteed[] = {{3, 1}, {1, 3}, {3, 3}, {11, 9}, {9, 11}, {11, 11}};
-    for (int i = 0; i < 6; ++i) {
-        setTile(guaranteed[i], Tile::Soft);
-        hidden[index(guaranteed[i])] = Item(1 + i % 3);
+    std::shuffle(hardChoices.begin(),hardChoices.end(),random);
+    const int hardCount=12+int(random()%5);
+    for(int i=0;i<hardCount;++i) setTile(hardChoices[i],Tile::Hard);
+
+    const unsigned softChance=unsigned(43+stage*3);
+    for(int y=1;y<Height-1;++y) for(int x=1;x<Width-1;++x) {
+        Cell c{x,y};
+        if(tile(c)!=Tile::Hard&&!inSafeZone(c)&&random()%100<softChance) setTile(c,Tile::Soft);
     }
-    for (int y = 1; y < Height - 1; ++y) for (int x = 1; x < Width - 1; ++x) {
-        Cell c{x, y};
-        if (tile(c) == Tile::Soft && hidden[index(c)] == Item::None && random() % 100 < 22)
-            hidden[index(c)] = Item(1 + random() % 3);
+
+    for(Cell spawn:spawns) {
+        setTile(spawn,Tile::Floor);
+        for(auto d:Directions) if(tile(offset(spawn,d))!=Tile::Hard) setTile(offset(spawn,d),Tile::Floor);
     }
-    exit = {13, 9};
-    setTile(exit, Tile::Soft);
-    hidden[index(exit)] = Item::None;
+
+    // Find the connected area from the player start, then select a distant exit.
+    const Cell start{1, 1};
+    std::array<int, Width * Height> previous;
+    previous.fill(-1);
+    std::queue<Cell> frontier;
+    previous[index(start)] = index(start);
+    frontier.push(start);
+    while (!frontier.empty()) {
+        Cell here = frontier.front(); frontier.pop();
+        std::array<Direction, 4> dirs{Direction::Up, Direction::Down, Direction::Left, Direction::Right};
+        std::shuffle(dirs.begin(), dirs.end(), random);
+        for (Direction d : dirs) {
+            Cell next = offset(here, d);
+            if (!inside(next) || tile(next) == Tile::Hard || previous[index(next)] >= 0) continue;
+            previous[index(next)] = index(here);
+            frontier.push(next);
+        }
+    }
+
+    std::vector<Cell> exitChoices;
+    for(int y=1;y<Height-1;++y) for(int x=1;x<Width-1;++x) {
+        Cell c{x,y};
+        if(previous[index(c)]>=0&&std::abs(c.x-start.x)+std::abs(c.y-start.y)>=8&&!inSafeZone(c))
+            exitChoices.push_back(c);
+    }
+    std::shuffle(exitChoices.begin(),exitChoices.end(),random);
+    bool fallbackPath=false;
+    if(exitChoices.empty()) {
+        // Defensive fallback: keep the campaign playable even for a very unlucky layout.
+        exit={13,11};
+        Cell c=start;
+        while(c.x<exit.x) { c=offset(c,Direction::Right);setTile(c,Tile::Floor); }
+        while(c.y<exit.y) { c=offset(c,Direction::Down);setTile(c,Tile::Floor); }
+        fallbackPath=true;
+    } else exit=exitChoices.front();
+    setTile(exit,Tile::Soft);
+    hidden[index(exit)]=Item::None;
+
+    // Carve the randomized route; the exit remains hidden under its soft block.
+    if(!fallbackPath) {
+        for(Cell c=exit;c!=start;) {
+            if(c!=exit) setTile(c,Tile::Floor);
+            int parent=previous[index(c)];c={parent%Width,parent/Width};
+        }
+    }
+
+    // Guaranteed upgrades still exist, but their crate positions come from this seed.
+    std::vector<Cell> itemChoices;
+    for(int y=1;y<Height-1;++y) for(int x=1;x<Width-1;++x) {
+        Cell c{x,y};if(tile(c)==Tile::Soft&&c!=exit)itemChoices.push_back(c);
+    }
+    std::shuffle(itemChoices.begin(),itemChoices.end(),random);
+    std::array<Item,6> guaranteed{{Item::Fire,Item::Fire,Item::Bomb,Item::Bomb,Item::Speed,Item::Speed}};
+    std::shuffle(guaranteed.begin(),guaranteed.end(),random);
+    for(int i=0;i<static_cast<int>(guaranteed.size());++i)
+        hidden[index(itemChoices[i])]=guaranteed[i];
+    for(int i=static_cast<int>(guaranteed.size());i<static_cast<int>(itemChoices.size());++i) {
+        Cell c=itemChoices[i];
+        if(random()%100<22) hidden[index(c)]=Item(1+random()%3);
+    }
 }
 void Game::newGame() {
+    if (randomizeSeedOnNewGame) baseSeed = freshSeed();
+    std::array<int,ArenaCount> order{};
+    std::iota(order.begin(),order.end(),0);
+    std::mt19937 selector(baseSeed);
+    std::shuffle(order.begin(),order.end(),selector);
+    if(randomizeSeedOnNewGame&&lastCampaignFirstVariant>=0&&order[0]==lastCampaignFirstVariant)
+        std::swap(order[0],order[1]);
+    for(int i=0;i<3;++i) {
+        stageMapVariants[i]=order[i];
+        stageMapSeeds[i]=ArenaSeeds[order[i]];
+    }
+    if(randomizeSeedOnNewGame) lastCampaignFirstVariant=stageMapVariants[0];
     practice = false;
     score = 0; lives = 3; elapsed = 0; nextBombId = 1; blastSequence = waveSequence = 0;
     players.fill(Player{});
@@ -102,7 +197,9 @@ void Game::loadStage(int number, bool keepAbilities) {
     stage = std::clamp(number, 1, 3);
     stageElapsed = 0; exitRevealed = false; phase = Phase::Playing;
     bombs.clear(); flames.clear(); items.clear(); enemies.clear();
-    buildArena(baseSeed + unsigned(stage) * 7919);
+    mapVariant=stageMapVariants[stage-1]+1;
+    mapSeed=stageMapSeeds[stage-1];
+    buildArena(mapSeed);
     if (!keepAbilities) for (auto& p : players) {
         p.range = 1; p.capacity = 1; p.speedLevel = 0; p.selected = BombKind::Normal;
         p.fireItemsCollected = p.bombItemsCollected = p.speedItemsCollected = 0;

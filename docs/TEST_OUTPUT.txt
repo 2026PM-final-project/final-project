@@ -55,6 +55,9 @@ GCC Release / CTest
 [PASS] 52 all six labs are unranked with safe single-player spawns
 [PASS] 53 all stages guarantee every item and a hidden exit
 [PASS] 54 deterministic seed produces reproducible stages
+[NOT RUN] 54A a new campaign selects another arena
+[NOT RUN] 54B stages select three different arenas from the pool
+[NOT RUN] 54C generated arena keeps a walkable route to the exit
 [PASS] 55 local rankings round-trip, sort, cap top ten, ignore broken rows
 [PASS] 56 live item cannot be collected from a burning cell
 [PASS] 57 newly placed bomb blocks an enemy's in-progress segment

@@ -179,7 +179,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     int best=std::max(game.score,view.ranks.empty()?0:view.ranks.front().score);
     centered(600,32,"HIGH SCORE",1,.94f,.26f,.22f);centered(600,68,number(best),1,.96f,.96f,.96f);
     centered(1094,32,"STAGE",1,.27f,.57f,1);centered(1094,68,std::to_string(game.stage),1,.96f,.96f,.96f);
-    centered(424,113,view.retro?"BOMBERMAN / FALL 2026":"BOMBERMAN / 3D VIEW",0,.73f,.70f,.80f);
+    centered(424,113,(view.retro?"BOMBERMAN":"BOMBER / 3D")+std::string(" / MAP ")+std::to_string(game.mapVariant)+"/15 / SEED "+std::to_string(game.mapSeed),0,.73f,.70f,.80f);
     border(62,136,724,628,{.18f,.18f,.23f});
     auto card=[&](float y,float h){rect(840,y,390,h,{.035f,.035f,.05f});border(840,y,390,h,{.18f,.18f,.23f});};
     float top=138;

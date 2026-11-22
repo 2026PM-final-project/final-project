@@ -313,7 +313,23 @@ int main() {
         }
     });
     test("54 deterministic seed produces reproducible stages",[]{
-        Game a(77),b(77);require(a.tiles==b.tiles&&a.hidden==b.hidden);
+        Game a(77),b(77);require(a.mapSeed==b.mapSeed&&a.tiles==b.tiles&&a.hidden==b.hidden);
+    });
+    test("54A a new campaign selects another arena",[]{
+        Game a;int first=a.mapVariant;a.newGame();require(a.mapVariant!=first);
+    });
+    test("54B stages select three different arenas from the pool",[]{
+        Game g(7701);int first=g.mapVariant;g.loadStage(2);int second=g.mapVariant;g.loadStage(3);
+        require(first!=second&&first!=g.mapVariant&&second!=g.mapVariant);
+    });
+    test("54C generated arena keeps a walkable route to the exit",[]{
+        Game g(7701);bool reachable=false;
+        const Direction dirs[]={Direction::Up,Direction::Down,Direction::Left,Direction::Right};
+        for(auto d:dirs) {
+            Cell neighbor=offset(g.exit,d);
+            if(g.tile(neighbor)==Tile::Floor&&!g.shortestPath({1,1},neighbor,Width*Height).empty()) reachable=true;
+        }
+        require(reachable);
     });
     test("55 local rankings round-trip, sort, cap top ten, ignore broken rows",[]{
         auto path=std::filesystem::current_path()/"ranking-test.tmp";

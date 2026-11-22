@@ -88,12 +88,15 @@ public:
     Cell exit{13, 11};
     bool exitRevealed = false, practice = false;
     int stage = 1, lives = 3, score = 0, nextBombId = 1;
+    unsigned mapSeed = 0;
+    int mapVariant = 1;
     float elapsed = 0.f, stageElapsed = 0.f;
     Phase phase = Phase::Playing;
     std::string notice;
     std::vector<Event> events;
 
-    explicit Game(unsigned seed = 2026);
+    Game();
+    explicit Game(unsigned seed);
     void newGame();
     void loadStage(int number, bool keepAbilities = true);
     void loadScene(Scene scene);
@@ -122,7 +125,12 @@ public:
 private:
     std::mt19937 random;
     unsigned baseSeed;
+    bool randomizeSeedOnNewGame = false;
+    std::array<unsigned, 3> stageMapSeeds{};
+    std::array<int, 3> stageMapVariants{};
+    int lastCampaignFirstVariant = -1;
     int blastSequence = 0, waveSequence = 0;
+    Game(unsigned seed, bool randomizeOnNewGame);
     void moveActor(Actor& actor, float distance, int playerId,
                    const std::function<Direction()>& choose);
     Direction chooseEnemyDirection(Enemy& enemy);

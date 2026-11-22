@@ -277,7 +277,7 @@ void Renderer::hud(const Game& game,const View& view) {
     text(930,122,view.muted?"M / SOUND OFF":"M / SOUND ON",0,.52f,.64f,.71f);
     panel(28,151,865,635,.043f,.065f,.092f);
     panel(28,151,865,3,.12f,.25f,.30f);
-    text(48,179,game.practice&&view.scene>=0?sceneName(Scene(view.scene)):"ARENA / "+std::string(game.stage==1?"FOUNDRY":game.stage==2?"DUNE WORKS":"NIGHT CIRCUIT"),0,.48f,.71f,.75f);
+    text(48,179,(game.practice&&view.scene>=0?std::string(sceneName(Scene(view.scene))):"ARENA / "+std::string(game.stage==1?"FOUNDRY":game.stage==2?"DUNE WORKS":"NIGHT CIRCUIT"))+" / MAP "+std::to_string(game.mapVariant)+"/15 / SEED "+std::to_string(game.mapSeed),0,.48f,.71f,.75f);
     panel(916,151,336,107);
     text(936,179,"SCORE",0,.48f,.64f,.70f);text(934,226,paddedScore(game.score),2,.98f,.79f,.38f);
     panel(916,272,336,103);text(936,302,"LIVES",0,.48f,.64f,.70f);
