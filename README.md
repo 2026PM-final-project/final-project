@@ -11,7 +11,7 @@ UI/UX 브랜치는 `final_project_modification/1122(4)`를 기준으로 초록 �
 GitHub에는 소스·문서·빌드 설정을 올립니다. 처음 내려받았다면 아래 GCC 또는 Visual Studio/CMake 방법으로 먼저 빌드하세요. `build/`의 실행 파일과 `dist/`의 배포 ZIP은 로컬에서 생성합니다. 빌드할 게임 대상은 **`BombermanDemo`**, 규칙 테스트 대상은 `bomber_tests`입니다.
 
 1. **`Run Demo.cmd`를 더블클릭**합니다. 현재 소스보다 새 실행 파일을 골라 실행하고, 없으면 GCC 또는 Visual Studio로 빌드합니다. 브랜치를 바꾼 뒤 예전 실행 파일을 여는 문제를 방지합니다.
-2. `STAGE 1`이 보이는 홈에서 **Space 또는 1 = 1인**, **2 = 같은 키보드 2인**을 선택합니다. STAGE 준비 화면은 1.2초 뒤 진행되며 Space/Enter로 바로 시작할 수도 있습니다.
+2. 홈 화면은 타이틀 로고와 미리보기 맵을 보여줍니다. **Space 또는 1 = 1인**, **2 = 같은 키보드 2인**을 선택합니다. STAGE 준비 화면은 1.2초 뒤 진행되며 Space/Enter로 바로 시작할 수도 있습니다.
 3. 채점 항목을 빠르게 확인하려면 **F3**으로 기능별 연습 장면에 들어갑니다. F3을 누를 때마다 다음 장면으로 바뀝니다.
 4. **F1** 도움말, **F2** BFS 경로, **F4** 일반 캠페인으로 복귀입니다.
 
@@ -70,6 +70,8 @@ ctest --test-dir build-vs -C Release --output-on-failure
 다른 창으로 포커스가 이동하면 입력을 비우고 진행 중인 게임을 일시정지합니다. 2인 모드에서는 방향키가 P2 전용이므로 P1과 겹치지 않습니다. **팀 목숨 3개와 점수**를 공유하고, 용량·화력·속도·폭탄 종류·원격 기폭 소유권은 독립적입니다. 어느 플레이어든 열린 출구에 들어가면 클리어합니다.
 
 **일반 캠페인의 화력은 기본 1칸이며, Fire 아이템을 획득하면 2칸이 되고 이후에도 2칸을 유지합니다.** 부서지는 벽 아래 아이템은 폭탄으로 벽을 파괴할 때 팝업으로 나타납니다. 노출시킨 그 폭발에는 살아남고, 이후 화염에는 파괴됩니다. 일부 F3 연습 장면은 연쇄·관통 시연을 위해 더 큰 화력을 미리 설정합니다.
+
+하단의 **F/B/S 배지 숫자는 능력치가 아니라 획득한 Fire/Bomb/Speed 아이템 개수**입니다. 새 게임은 모두 0개로 시작하고 해당 아이템을 주울 때마다 1씩 증가합니다. 개수는 스테이지가 바뀌어도 유지되고 새 게임을 시작하면 초기화됩니다.
 
 ## 3. 명세·채점 기준 구현표
 
@@ -232,19 +234,19 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | 파일 / 주석 | 현재 줄 범위 | 해당 코드의 역할 |
 |---|---|---|
 | [src/game.hpp](src/game.hpp) / 공통 선언 | L1~11 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/game.hpp](src/game.hpp#L12) / [01] | L12~76 | 상수·열거형·좌표·플레이어·적·폭탄·화염·입력 데이터 선언 |
-| [src/game.hpp](src/game.hpp#L77) / [02] | L77~134 | 게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언 |
+| [src/game.hpp](src/game.hpp#L12) / [01] | L12~77 | 상수·열거형·좌표·플레이어·적·폭탄·화염·입력 데이터 선언 |
+| [src/game.hpp](src/game.hpp#L78) / [02] | L78~135 | 게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언 |
 | [src/game.cpp](src/game.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/game.cpp](src/game.cpp#L8) / [01] | L8~61 | 격자 방향 연산, 칸 중심·속도, 문자열·좌표 접근 |
-| [src/game.cpp](src/game.cpp#L62) / [02] | L62~132 | 고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환 |
-| [src/game.cpp](src/game.cpp#L133) / [03] | L133~188 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
-| [src/game.cpp](src/game.cpp#L189) / [04] | L189~241 | 벽·폭탄 점유 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
-| [src/game.cpp](src/game.cpp#L242) / [05] | L242~272 | 목표 중심까지 등속 이동, 새 장애물 회피, 폭탄 통행 권한 회수 |
-| [src/game.cpp](src/game.cpp#L273) / [06] | L273~312 | 소유자별 폭탄 용량, 겹침 권한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
-| [src/game.cpp](src/game.cpp#L313) / [07] | L313~346 | 폭발 큐·중복 제거·벽 스냅샷·네 방향 전파·즉시 연쇄반응 |
-| [src/game.cpp](src/game.cpp#L347) / [08] | L347~412 | 접촉 기하, 적 피해, 팀 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
-| [src/game.cpp](src/game.cpp#L413) / [09] | L413~444 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
-| [src/game.cpp](src/game.cpp#L445) / [10] | L445~464 | F2 표시용 전체 8칸 BFS 거리 지도 |
+| [src/game.cpp](src/game.cpp#L62) / [02] | L62~133 | 고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환 |
+| [src/game.cpp](src/game.cpp#L134) / [03] | L134~189 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
+| [src/game.cpp](src/game.cpp#L190) / [04] | L190~242 | 벽·폭탄 점유 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
+| [src/game.cpp](src/game.cpp#L243) / [05] | L243~273 | 목표 중심까지 등속 이동, 새 장애물 회피, 폭탄 통행 권한 회수 |
+| [src/game.cpp](src/game.cpp#L274) / [06] | L274~313 | 소유자별 폭탄 용량, 겹침 권한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
+| [src/game.cpp](src/game.cpp#L314) / [07] | L314~347 | 폭발 큐·중복 제거·벽 스냅샷·네 방향 전파·즉시 연쇄반응 |
+| [src/game.cpp](src/game.cpp#L348) / [08] | L348~413 | 접촉 기하, 적 피해, 팀 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
+| [src/game.cpp](src/game.cpp#L414) / [09] | L414~445 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
+| [src/game.cpp](src/game.cpp#L446) / [10] | L446~465 | F2 표시용 전체 8칸 BFS 거리 지도 |
 | [src/main.cpp](src/main.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/main.cpp](src/main.cpp#L16) / [01] | L16~74 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
 | [src/main.cpp](src/main.cpp#L75) / [02] | L75~108 | 방향키/WASD 1인 별칭·2인 키 분리, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
@@ -252,7 +254,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/main.cpp](src/main.cpp#L155) / [04] | L155~224 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
 | [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
-| [src/renderer.hpp](src/renderer.hpp) | L1~52 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
+| [src/renderer.hpp](src/renderer.hpp) | L1~53 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
 | [src/renderer.cpp](src/renderer.cpp) / 공통 선언 | L1~9 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/renderer.cpp](src/renderer.cpp#L10) / [01] | L10~57 | 면 법선·UV가 있는 상자, 구의 법선, 바닥 그림자 |
 | [src/renderer.cpp](src/renderer.cpp#L58) / [02] | L58~131 | WGL·폰트·64x64 바닥/돌/나무 텍스처 생성, 리사이즈·자원 해제 |
@@ -260,14 +262,15 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/renderer.cpp](src/renderer.cpp#L151) / [04] | L151~202 | 3D 카메라·광원·재질, 질감 있는 맵, 출구, F2 BFS 경로와 거리 |
 | [src/renderer.cpp](src/renderer.cpp#L203) / [05] | L203~252 | 회전 아이템, 도화선 폭탄, 플레이어 헬멧, 적 4종 모델 |
 | [src/renderer.cpp](src/renderer.cpp#L253) / [06] | L253~267 | 화염의 투명 외곽·밝은 코어·불티 |
-| [src/renderer.cpp](src/renderer.cpp#L268) / [07] | L268~311 | 실시간 스코어·목숨·각 플레이어 강화·임무·조작 HUD |
-| [src/renderer.cpp](src/renderer.cpp#L312) / [08] | L312~368 | 제목·도움말·랭킹·정지·게임오버·단계/최종 클리어 오버레이 및 최종 합성 |
-| [src/renderer.cpp](src/renderer.cpp#L369) / [09] | L369~387 | OpenGL front buffer 읽기와 BMP 파일 저장 |
+| [src/renderer.cpp](src/renderer.cpp#L268) / [07] | L268~313 | 실시간 스코어·목숨·각 플레이어 강화·임무·조작 HUD |
+| [src/renderer.cpp](src/renderer.cpp#L314) / [08] | L314~371 | 제목·도움말·랭킹·정지·게임오버·단계/최종 클리어 오버레이 및 최종 합성 |
+| [src/renderer.cpp](src/renderer.cpp#L372) / [09] | L372~390 | OpenGL front buffer 읽기와 BMP 파일 저장 |
 | [src/retro.cpp](src/retro.cpp) / 공통 선언 | L1~39 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/retro.cpp](src/retro.cpp#L40) / [01] | L40~103 | 1122(4) 색상·입체 면·방향광·반사광을 64x64 RGBA 텍스처로 캐시, 글자 중앙 정렬 |
 | [src/retro.cpp](src/retro.cpp#L104) / [02] | L104~175 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
 | [src/retro.cpp](src/retro.cpp#L176) / [03] | L176~226 | 1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분 HUD |
-| [src/retro.cpp](src/retro.cpp#L227) / [04] | L227~279 | STAGE # 홈·준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
+| [src/retro.cpp](src/retro.cpp#L227) / [04] | L227~272 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
+| [src/retro.cpp](src/retro.cpp#L273) / [05] | L273~325 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
 | [src/audio.hpp](src/audio.hpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/audio.hpp](src/audio.hpp#L8) / [01] | L8~23 | 별도 스레드·원자 플래그·mutex 이벤트 큐를 가진 오디오 인터페이스 |
 | [src/audio.cpp](src/audio.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
@@ -312,28 +315,28 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Game::buildArena` | [src/game.cpp:L63](src/game.cpp#L63) |
 | `Game::newGame` | [src/game.cpp:L94](src/game.cpp#L94) |
 | `Game::loadStage` | [src/game.cpp:L105](src/game.cpp#L105) |
-| `Game::nextStage` | [src/game.cpp:L128](src/game.cpp#L128) |
-| `Game::loadScene` | [src/game.cpp:L134](src/game.cpp#L134) |
-| `Game::passable` | [src/game.cpp:L190](src/game.cpp#L190) |
-| `Game::shortestPath` | [src/game.cpp:L197](src/game.cpp#L197) |
-| `Game::chooseEnemyDirection` | [src/game.cpp:L222](src/game.cpp#L222) |
-| `Game::moveActor` | [src/game.cpp:L243](src/game.cpp#L243) |
-| `Game::placeBomb` | [src/game.cpp:L274](src/game.cpp#L274) |
-| `Game::detonateRemote` | [src/game.cpp:L290](src/game.cpp#L290) |
-| `Game::cycleBomb` | [src/game.cpp:L296](src/game.cpp#L296) |
-| `Game::reveal` | [src/game.cpp:L300](src/game.cpp#L300) |
-| `Game::addFlame` | [src/game.cpp:L306](src/game.cpp#L306) |
-| `Game::explodeBombs` | [src/game.cpp:L314](src/game.cpp#L314) |
-| `Game::touches` | [src/game.cpp:L348](src/game.cpp#L348) |
-| `Game::aliveEnemies` | [src/game.cpp:L353](src/game.cpp#L353) |
-| `Game::exitOpen` | [src/game.cpp:L356](src/game.cpp#L356) |
-| `Game::resetPositions` | [src/game.cpp:L357](src/game.cpp#L357) |
-| `Game::loseLife` | [src/game.cpp:L365](src/game.cpp#L365) |
-| `Game::resolveContacts` | [src/game.cpp:L372](src/game.cpp#L372) |
-| `Game::togglePause` | [src/game.cpp:L414](src/game.cpp#L414) |
-| `Game::update` | [src/game.cpp:L418](src/game.cpp#L418) |
-| `Game::takeEvents` | [src/game.cpp:L441](src/game.cpp#L441) |
-| `Game::distanceMap` | [src/game.cpp:L446](src/game.cpp#L446) |
+| `Game::nextStage` | [src/game.cpp:L129](src/game.cpp#L129) |
+| `Game::loadScene` | [src/game.cpp:L135](src/game.cpp#L135) |
+| `Game::passable` | [src/game.cpp:L191](src/game.cpp#L191) |
+| `Game::shortestPath` | [src/game.cpp:L198](src/game.cpp#L198) |
+| `Game::chooseEnemyDirection` | [src/game.cpp:L223](src/game.cpp#L223) |
+| `Game::moveActor` | [src/game.cpp:L244](src/game.cpp#L244) |
+| `Game::placeBomb` | [src/game.cpp:L275](src/game.cpp#L275) |
+| `Game::detonateRemote` | [src/game.cpp:L291](src/game.cpp#L291) |
+| `Game::cycleBomb` | [src/game.cpp:L297](src/game.cpp#L297) |
+| `Game::reveal` | [src/game.cpp:L301](src/game.cpp#L301) |
+| `Game::addFlame` | [src/game.cpp:L307](src/game.cpp#L307) |
+| `Game::explodeBombs` | [src/game.cpp:L315](src/game.cpp#L315) |
+| `Game::touches` | [src/game.cpp:L349](src/game.cpp#L349) |
+| `Game::aliveEnemies` | [src/game.cpp:L354](src/game.cpp#L354) |
+| `Game::exitOpen` | [src/game.cpp:L357](src/game.cpp#L357) |
+| `Game::resetPositions` | [src/game.cpp:L358](src/game.cpp#L358) |
+| `Game::loseLife` | [src/game.cpp:L366](src/game.cpp#L366) |
+| `Game::resolveContacts` | [src/game.cpp:L373](src/game.cpp#L373) |
+| `Game::togglePause` | [src/game.cpp:L415](src/game.cpp#L415) |
+| `Game::update` | [src/game.cpp:L419](src/game.cpp#L419) |
+| `Game::takeEvents` | [src/game.cpp:L442](src/game.cpp#L442) |
+| `Game::distanceMap` | [src/game.cpp:L447](src/game.cpp#L447) |
 | `Renderer::initialize` | [src/renderer.cpp:L59](src/renderer.cpp#L59) |
 | `Renderer::createFonts` | [src/renderer.cpp:L100](src/renderer.cpp#L100) |
 | `Renderer::resize` | [src/renderer.cpp:L118](src/renderer.cpp#L118) |
@@ -343,14 +346,15 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Renderer::panel` | [src/renderer.cpp:L143](src/renderer.cpp#L143) |
 | `Renderer::board` | [src/renderer.cpp:L152](src/renderer.cpp#L152) |
 | `Renderer::hud` | [src/renderer.cpp:L269](src/renderer.cpp#L269) |
-| `Renderer::overlay` | [src/renderer.cpp:L313](src/renderer.cpp#L313) |
-| `Renderer::draw` | [src/renderer.cpp:L358](src/renderer.cpp#L358) |
-| `Renderer::screenshot` | [src/renderer.cpp:L370](src/renderer.cpp#L370) |
+| `Renderer::overlay` | [src/renderer.cpp:L315](src/renderer.cpp#L315) |
+| `Renderer::draw` | [src/renderer.cpp:L360](src/renderer.cpp#L360) |
+| `Renderer::screenshot` | [src/renderer.cpp:L373](src/renderer.cpp#L373) |
 | `Renderer::initRetro` | [src/retro.cpp:L41](src/retro.cpp#L41) |
 | `Renderer::centered` | [src/retro.cpp:L98](src/retro.cpp#L98) |
 | `Renderer::retroBoard` | [src/retro.cpp:L105](src/retro.cpp#L105) |
 | `Renderer::retroHud` | [src/retro.cpp:L177](src/retro.cpp#L177) |
-| `Renderer::retroOverlay` | [src/retro.cpp:L228](src/retro.cpp#L228) |
+| `Renderer::retroTitleScreen` | [src/retro.cpp:L228](src/retro.cpp#L228) |
+| `Renderer::retroOverlay` | [src/retro.cpp:L274](src/retro.cpp#L274) |
 | `Audio::start` | [src/audio.cpp:L17](src/audio.cpp#L17) |
 | `Audio::play` | [src/audio.cpp:L23](src/audio.cpp#L23) |
 | `Audio::mute` | [src/audio.cpp:L24](src/audio.cpp#L24) |

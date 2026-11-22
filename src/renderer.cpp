@@ -98,13 +98,13 @@ bool Renderer::initialize(HWND window) {
     return true;
 }
 bool Renderer::createFonts() {
-    const int sizes[]={17,24,42};
+    const int sizes[]={17,24,42,64};
     float scale=std::min(width/1280.f,height/900.f);
-    for(int i=0;i<3;++i) {
+    for(int i=0;i<4;++i) {
         int pixels=std::max(8,int(std::round(sizes[i]*scale)));
         HFONT font=CreateFontA(-pixels,0,0,0,i==0?FW_NORMAL:FW_BOLD,FALSE,FALSE,FALSE,
                               ANSI_CHARSET,OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,
-                              DEFAULT_PITCH,i==2?"Arial":"Consolas");
+                              DEFAULT_PITCH,i>=2?"Arial":"Consolas");
         auto old=SelectObject(dc,font);GLuint replacement=glGenLists(128);
         BOOL ok=wglUseFontBitmapsA(dc,0,128,replacement);
         GetCharWidth32A(dc,0,127,fontWidths[i].data());
@@ -284,15 +284,17 @@ void Renderer::hud(const Game& game,const View& view) {
     text(936,346,std::string(std::max(0,game.lives),'o')+"   /   "+std::to_string(game.lives)+" LEFT",1,.3f,.92f,.74f);
     int top=389;
     for(const auto& p:game.players) {
-        panel(916,float(top),336,game.players.size()==2?103.f:130.f);
+        panel(916,float(top),336,130.f);
         text(936,float(top+28),"P"+std::to_string(p.id+1)+" / "+bombName(p.selected),1,p.id?1.f:.3f,p.id?.68f:.87f,p.id?.31f:1.f);
         int active=0;for(const auto& b:game.bombs)if(b.owner==p.id)++active;
         text(936,float(top+59),"FIRE "+std::to_string(p.range)+"    BOMBS "+std::to_string(active)+"/"+std::to_string(p.capacity));
         std::ostringstream speed;speed<<std::fixed<<std::setprecision(2)<<p.speed();
         text(936,float(top+85),"SPEED "+speed.str()+"    LV "+std::to_string(p.speedLevel),0,.55f,.68f,.74f);
-        top+=116;
+        text(936,float(top+111),"ITEMS F/B/S  "+std::to_string(p.fireItemsCollected)+"/"+
+             std::to_string(p.bombItemsCollected)+"/"+std::to_string(p.speedItemsCollected),0,.75f,.78f,.82f);
+        top+=game.players.size()==2?140:116;
     }
-    int objective=game.players.size()==2?633:536;
+    int objective=game.players.size()==2?670:536;
     panel(916,float(objective),336,153);
     text(936,float(objective+29),"MISSION STATUS",0,.48f,.64f,.70f);
     text(936,float(objective+61),"HOSTILES    "+std::to_string(game.aliveEnemies()),1);
@@ -358,7 +360,8 @@ void Renderer::overlay(const Game& game,const View& view) {
 void Renderer::draw(const Game& game,const View& view) {
     glClearColor(.025f,.042f,.065f,1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     ui();
-    if(view.retro) {retroHud(game,view);retroBoard(game,view);retroOverlay(game,view);}
+    if(view.menu&&view.retro&&!view.help&&!view.ranking)retroTitleScreen();
+    else if(view.retro) {retroHud(game,view);retroBoard(game,view);retroOverlay(game,view);}
     else {
         hud(game,view);board(game,view);ui();overlay(game,view);
         if(view.readyTime>0)retroOverlay(game,view);
