@@ -91,14 +91,10 @@ void Game::buildArena(unsigned seed) {
     setTile(exit, Tile::Soft);
     hidden[index(exit)] = Item::None;
 }
-void Game::newGame(int count) {
+void Game::newGame() {
     practice = false;
-    score = 0; lives = 3; elapsed = 0; nextBombId = 1; blastSequence = 0;
-    players.assign(std::clamp(count, 1, 2), Player{});
-    for (int i = 0; i < int(players.size()); ++i) {
-        players[i].id = i;
-        players[i].spawn = i == 0 ? Cell{1, 1} : Cell{13, 11};
-    }
+    score = 0; lives = 3; elapsed = 0; nextBombId = 1; blastSequence = waveSequence = 0;
+    players.fill(Player{});
     events.clear();
     loadStage(1, false);
 }
@@ -132,8 +128,8 @@ void Game::nextStage() {
 }
 
 // [03] Explicit presentation fixtures; excluded from persistent rankings.
-void Game::loadScene(Scene scene, int count) {
-    newGame(count); practice = true; enemies.clear(); bombs.clear(); flames.clear(); items.clear();
+void Game::loadScene(Scene scene) {
+    newGame(); practice = true; enemies.clear(); bombs.clear(); flames.clear(); items.clear();
     for (auto& t : tiles) if (t == Tile::Soft) t = Tile::Floor;
     hidden.fill(Item::None); exit = {13, 9}; setTile(exit, Tile::Soft);
     exitRevealed = false; notice = sceneName(scene);
@@ -141,8 +137,6 @@ void Game::loadScene(Scene scene, int count) {
         a.spawn = c; a.x = c.x + .5f; a.y = c.y + .5f; a.target = c;
         a.travel = a.direction = Direction::None;
     };
-    // Labs reuse the bottom-right enemy area; keep co-op's second spawn separate.
-    if (players.size() > 1) position(players[1], {1, 11});
     auto enemy = [&](Cell c, EnemyKind kind) {
         Enemy e; position(e, c); e.kind = kind;
         e.hp = kind == EnemyKind::Armored ? 2 : 1; enemies.push_back(e);
@@ -183,7 +177,7 @@ void Game::loadScene(Scene scene, int count) {
         notice = "Q: NORMAL / PIERCE / REMOTE. E: remote trigger. Armor takes two blasts.";
     } else {
         position(players[0], {1, 1}); enemy({5, 1}, EnemyKind::Chaser);
-        notice = "Let the chaser touch you: shared lives -1, survivors return to spawn.";
+        notice = "Let the chaser touch you: lives -1, survivors return to spawn.";
     }
 }
 
@@ -298,21 +292,23 @@ void Game::cycleBomb(int id) {
     if (id >= 0 && id < int(players.size()))
         players[id].selected = BombKind((int(players[id].selected) + 1) % 3);
 }
-void Game::reveal(Cell c) {
+void Game::reveal(Cell c, int waveId) {
     setTile(c, Tile::Floor); score += 10;
     if (c == exit) exitRevealed = true;
     Item item = hidden[index(c)]; hidden[index(c)] = Item::None;
-    if (item != Item::None) items.push_back({c, item});
+    if (item != Item::None) items.push_back({c, item, 0.f, waveId});
 }
-void Game::addFlame(Cell c, int owner, int blastId) {
-    items.erase(std::remove_if(items.begin(), items.end(), [c](const Pickup& i) {
-        return i.cell == c;
+void Game::addFlame(Cell c, int owner, int blastId, int waveId) {
+    items.erase(std::remove_if(items.begin(), items.end(), [c, waveId](const Pickup& i) {
+        return i.cell == c && (i.protectedWave == 0 || i.protectedWave != waveId);
     }), items.end());
-    flames.push_back({c, FlameTime, owner, blastId});
+    flames.push_back({c, FlameTime, owner, blastId, waveId});
 }
 
 // [07] Iterative breadth-first chain reaction; walls stop rays, bombs enqueue once.
 void Game::explodeBombs(const std::vector<int>& ids) {
+    if (ids.empty()) return;
+    const int waveId = ++waveSequence;
     std::queue<int> queue;
     std::set<int> queued;
     auto enqueue = [&](int id) { if (queued.insert(id).second) queue.push(id); };
@@ -325,19 +321,20 @@ void Game::explodeBombs(const std::vector<int>& ids) {
         auto it = std::find_if(bombs.begin(), bombs.end(), [id](const Bomb& b) { return b.id == id; });
         if (it == bombs.end()) continue;
         Bomb b = *it; bombs.erase(it); int blastId = ++blastSequence;
-        addFlame(b.cell, b.owner, blastId); events.push_back(Event::Explode);
+        addFlame(b.cell, b.owner, blastId, waveId); events.push_back(Event::Explode);
         for (auto d : Directions) {
           Cell c = b.cell;
           for (int k = 1; k <= b.range; ++k) {
             c = offset(c, d);
             if (!inside(c) || before[index(c)] == Tile::Hard) break;
             if (before[index(c)] == Tile::Soft) {
-                // The newly exposed item survives its revealing blast. Later flames destroy it.
-                if (tile(c) == Tile::Soft) reveal(c);
+                // 17:29: the destroyed crate cell burns too; protect its drop for this wave.
+                addFlame(c, b.owner, blastId, waveId);
+                if (tile(c) == Tile::Soft) reveal(c, waveId);
                 if (b.kind != BombKind::Pierce) break;
                 continue;
             }
-            addFlame(c, b.owner, blastId);
+            addFlame(c, b.owner, blastId, waveId);
             auto other = std::find_if(bombs.begin(), bombs.end(), [c](const Bomb& n) { return n.cell == c; });
             if (other != bombs.end()) { enqueue(other->id); break; }
           }
@@ -345,7 +342,7 @@ void Game::explodeBombs(const std::vector<int>& ids) {
     }
 }
 
-// [08] Contacts: circle/AABB, unique blast damage, items, shared lives, open exit.
+// [08] Contacts: circle/AABB, unique blast damage, items, lives, open exit.
 bool Game::touches(const Actor& a, Cell c, float radius) const {
     float dx = a.x - std::clamp(a.x, float(c.x), float(c.x + 1));
     float dy = a.y - std::clamp(a.y, float(c.y), float(c.y + 1));
@@ -387,15 +384,18 @@ void Game::resolveContacts() {
             float dx = p.x - e.x, dy = p.y - e.y;
             if (dx * dx + dy * dy < .48f * .48f) hit = true;
         }
-        if (hit) { loseLife(); return; } // A simultaneous team collision costs one life.
+        if (hit) { loseLife(); return; } // Simultaneous contacts cost only one life.
     }
     for (auto& p : players) if (p.alive) {
         for (auto it = items.begin(); it != items.end();) {
-            bool burning = std::any_of(flames.begin(), flames.end(), [&](const Flame& f) {
-                return f.cell == it->cell;
-            });
-            if (burning) { it = items.erase(it); continue; }
-            if (!touches(p, it->cell, .12f)) { ++it; continue; }
+            bool burning = false, destroyed = false;
+            for (const auto& f : flames) if (f.cell == it->cell) {
+                burning = true;
+                if (it->protectedWave == 0 || it->protectedWave != f.waveId) destroyed = true;
+            }
+            if (destroyed) { it = items.erase(it); continue; }
+            // A protected drop cannot be collected until its revealing flames expire.
+            if (burning || !touches(p, it->cell, .12f)) { ++it; continue; }
             if (it->item == Item::Fire) { ++p.range; ++p.fireItemsCollected; }
             if (it->item == Item::Bomb) { ++p.capacity; ++p.bombItemsCollected; }
             if (it->item == Item::Speed) { ++p.speedLevel; ++p.speedItemsCollected; }
@@ -420,7 +420,10 @@ void Game::update(float dt, const Input& input) {
     if (phase != Phase::Playing || dt <= 0) return;
     dt = std::min(dt, .05f); elapsed += dt; stageElapsed += dt;
     for (auto& p : players) p.invincible = std::max(0.f, p.invincible - dt);
-    for (auto& item : items) item.age += dt;
+    for (auto& item : items) {
+        bool covered = std::any_of(flames.begin(), flames.end(), [&](const Flame& f) { return f.cell == item.cell; });
+        if (!covered) item.age += dt;
+    }
     for (auto& f : flames) f.ttl -= dt;
     flames.erase(std::remove_if(flames.begin(), flames.end(), [](const Flame& f) { return f.ttl <= 0; }), flames.end());
     for (int i = 0; i < int(players.size()); ++i) {

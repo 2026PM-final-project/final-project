@@ -1,8 +1,10 @@
 # BOMBER / LAB — C++ Bomberman Final Project Demo
 
-`final_project.pdf`의 기본 규칙 ①~⑳, advanced 두 항목, 추가점수 예시 여섯 항목을 구현한 Windows 데모입니다. C++17, Win32, OpenGL을 사용합니다. 3D 조명·셰이딩과 실제 텍스처 매핑을 모두 사용하며, 그림·음악은 코드에서 직접 생성합니다. 인터넷, 외부 에셋, 별도 게임 엔진 설치 없이 실행할 수 있습니다.
+`final_project.pdf`의 기본 규칙 ①~⑳과 advanced 항목을 구현한 Windows 1인용 데모입니다. 추가점수 기능 중 2인용은 이번 요청으로 삭제했습니다. C++17, Win32, OpenGL을 사용합니다. 3D 조명·셰이딩과 실제 텍스처 매핑을 모두 사용하며, 그림·음악은 코드에서 직접 생성합니다. 인터넷, 외부 에셋, 별도 게임 엔진 설치 없이 실행할 수 있습니다.
 
 UI/UX 브랜치는 `final_project_modification/1122(4)`를 기준으로 초록 타일·입체 블록·파란 구형 캐릭터와 1UP/HIGH SCORE/STAGE 화면을 반영했습니다. 기본 화면은 새 클래식 모드이고 **V**로 기존 3D 모드도 볼 수 있습니다. 자세한 대응표는 [1122(4) 반영 내역](docs/UIUX_1122.md)에 있습니다.
+
+[17:29 commit 수정 메모](docs/CHANGES_1729.md): 1인 전용·방향키 이동·부서진 블록 칸의 화염을 반영했습니다. 현재 수정 소스는 이 저장소의 로컬 `main` 브랜치 `src/`에 있으며 Git 추적 대상입니다. 루트의 **`Run Demo.cmd`**로 실행합니다.
 
 ![실제 데모 화면](docs/demo.png)
 
@@ -11,7 +13,7 @@ UI/UX 브랜치는 `final_project_modification/1122(4)`를 기준으로 초록 �
 GitHub에는 소스·문서·빌드 설정을 올립니다. 처음 내려받았다면 아래 GCC 또는 Visual Studio/CMake 방법으로 먼저 빌드하세요. `build/`의 실행 파일과 `dist/`의 배포 ZIP은 로컬에서 생성합니다. 빌드할 게임 대상은 **`BombermanDemo`**, 규칙 테스트 대상은 `bomber_tests`입니다.
 
 1. **`Run Demo.cmd`를 더블클릭**합니다. 현재 소스보다 새 실행 파일을 골라 실행하고, 없으면 GCC 또는 Visual Studio로 빌드합니다. 브랜치를 바꾼 뒤 예전 실행 파일을 여는 문제를 방지합니다.
-2. 홈 화면은 타이틀 로고와 미리보기 맵을 보여줍니다. **Space 또는 1 = 1인**, **2 = 같은 키보드 2인**을 선택합니다. STAGE 준비 화면은 1.2초 뒤 진행되며 Space/Enter로 바로 시작할 수도 있습니다.
+2. 홈 화면은 타이틀 로고와 미리보기 맵을 보여줍니다. **Space 또는 1**로 1인 게임을 시작합니다. 이동은 **방향키만** 사용합니다. STAGE 준비 화면은 1.2초 뒤 진행되며 Space/Enter로 바로 시작할 수도 있습니다.
 3. 채점 항목을 빠르게 확인하려면 **F3**으로 기능별 연습 장면에 들어갑니다. F3을 누를 때마다 다음 장면으로 바뀝니다.
 4. **F1** 도움말, **F2** BFS 경로, **F4** 일반 캠페인으로 복귀입니다.
 
@@ -43,16 +45,16 @@ ctest --test-dir build-vs -C Release --output-on-failure
 
 ## 2. 조작법
 
-| 기능 | P1 | P2 (2인 모드) |
-|---|---|---|
-| 상하좌우 이동 | WASD. **1인 모드에서는 방향키도 지원** | 방향키 |
-| 폭탄 설치 | Space | Enter |
-| 일반 → 관통 → 원격 폭탄 순환 | Q | 오른쪽 Ctrl |
-| 자신의 원격 폭탄 기폭 | E | Shift (왼쪽/오른쪽 모두) |
+| 기능 | 키 |
+|---|---|
+| 상하좌우 이동 | 방향키 ↑ ↓ ← → |
+| 폭탄 설치 | Space |
+| 일반 → 관통 → 원격 폭탄 순환 | Q |
+| 자신의 원격 폭탄 기폭 | E |
 
 | 공통 키 | 기능 |
 |---|---|
-| Space / 1 / 2 | 홈에서 Space·1은 1인, 2는 2인 시작 |
+| Space / 1 | 홈에서 1인 게임 시작 |
 | Space / Enter | STAGE 준비 화면 즉시 시작, 스테이지 완료 후 다음 단계 |
 | Space | 게임오버·최종 승리 후 새 게임 |
 | H / F1 | 도움말. 게임 시간 정지 |
@@ -67,9 +69,9 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | Esc | 도움말·랭킹 닫기. 게임에서는 홈으로 이동 |
 | Alt+F4 / 창 닫기 | 프로그램 종료 |
 
-다른 창으로 포커스가 이동하면 입력을 비우고 진행 중인 게임을 일시정지합니다. 2인 모드에서는 방향키가 P2 전용이므로 P1과 겹치지 않습니다. **팀 목숨 3개와 점수**를 공유하고, 용량·화력·속도·폭탄 종류·원격 기폭 소유권은 독립적입니다. 어느 플레이어든 열린 출구에 들어가면 클리어합니다.
+다른 창으로 포커스가 이동하면 입력을 비우고 진행 중인 게임을 일시정지합니다. 1인 전용이며 WASD와 2인용 시작·이동·폭탄 조작은 제거했습니다. 목숨은 3개로 시작합니다. 기존 연속 이동과 짧은 입력의 한 칸 이동은 유지합니다.
 
-**일반 캠페인의 화력은 기본 1칸이며, Fire 아이템을 획득할 때마다 사거리가 1칸씩 증가합니다.** 예를 들어 두 개를 주우면 기본 1칸에서 3칸이 됩니다. 부서지는 벽 아래 아이템은 폭탄으로 벽을 파괴할 때 팝업으로 나타납니다. 노출시킨 그 폭발에는 살아남고, 이후 화염에는 파괴됩니다. 일부 F3 연습 장면은 연쇄·관통 시연을 위해 더 큰 화력을 미리 설정합니다.
+**일반 캠페인의 화력은 기본 1칸이며, Fire 아이템을 획득할 때마다 사거리가 1칸씩 증가합니다.** 예를 들어 두 개를 주우면 기본 1칸에서 3칸이 됩니다. 부서지는 벽 아래 아이템은 폭탄으로 벽을 파괴할 때 팝업으로 나타납니다. 노출시킨 연쇄폭발의 화염에는 살아남고, 그 화염이 꺼진 뒤 획득할 수 있습니다. 다른 폭발의 화염에는 파괴됩니다. 일부 F3 연습 장면은 연쇄·관통 시연을 위해 더 큰 화력을 미리 설정합니다.
 
 하단의 **F/B/S 배지 숫자는 능력치가 아니라 획득한 Fire/Bomb/Speed 아이템 개수**입니다. 새 게임은 모두 0개로 시작하고 해당 아이템을 주울 때마다 1씩 증가합니다. 개수는 스테이지가 바뀌어도 유지되고 새 게임을 시작하면 초기화됩니다.
 
@@ -106,21 +108,21 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | p19 | 위 충돌 처리의 통합 | `passable`, `touches`, `resolveContacts` | T03~06, T19, T27~40, T57~58 |
 | p20 | 3D lighting & shading **또는** texturing | 두 가지 모두 구현. 법선·광원·재질 + 3종 실제 OpenGL 텍스처 | `Renderer::initialize`, `board`, 실제 창 확인 |
 
-### 추가점수 목록도 모두 구현
+### 추가점수 구현 현황
 
 | PDF p20 항목 | 구현과 확인 방법 |
 |---|---|
 | Advanced: Chaser | 보라색 적. BFS 최단 거리 ≤8일 때 추격. F2로 실제 경로 확인 |
-| Advanced: Items | Fire=범위 1→2(이후 유지), Bomb=용량 +1, Speed=레벨 +1·이동속도 +0.45칸/초. 기본 속도 3칸/초 |
+| Advanced: Items | Fire=획득할 때마다 범위 +1, Bomb=용량 +1, Speed=레벨 +1·이동속도 +0.45칸/초. 기본 속도 3칸/초 |
 | Sound | 합성 배경 음악, 설치·폭발·획득·피격·적 사망·클리어 효과음. M으로 켜기/끄기 |
 | Stages / level | 3개 스테이지. 지형 색상·벽 배치·적 구성 변화. 다음 스테이지에 능력·점수·남은 목숨 유지 |
-| Score board / ranking | 정상 캠페인의 게임오버 또는 최종 승리 시 1회 기록. 점수 내림차순 상위 10개, 날짜·도달 스테이지·인원 표시. 재실행 후 유지 |
+| Score board / ranking | 정상 캠페인의 게임오버 또는 최종 승리 시 1회 기록. 점수 내림차순 상위 10개, 날짜·도달 스테이지 표시. 재실행 후 유지 |
 | Special bombs | 관통 폭탄: 부서지는 벽 관통, 단단한 벽은 차단. 원격 폭탄: 자동 타이머 없이 수동 기폭, 화염에는 즉시 연쇄폭발 |
-| Multiple players | 같은 키보드 2인 협동. 각자 조작·설치 용량·폭탄 소유권·강화·종류 선택·원격 기폭 |
+| Multiple players | 이번 요청에 따라 삭제. 1인 전용 |
 | Special enemies | 강철색 Armored: 서로 다른 폭발 2회 필요. 청록색 Swift: 기본 적보다 빠르게 이동 |
 | Completeness / presentation | 제목·도움말·상태 HUD·정지·패배·스테이지 완료·최종 승리·랭킹·6개 시연 장면·스크린샷 저장 |
 
-원문 p20의 괄호에는 **보너스 최대 3점**이 표시돼 있습니다. 목록을 모두 구현했다고 가산점이 항목 수만큼 무제한 합산된다는 뜻은 아닙니다. 완성도 및 발표 품질 점수는 실제 평가에 달려 있습니다.
+원문 p20의 괄호에는 **보너스 최대 3점**이 표시돼 있습니다. 추가 기능 수만큼 가산점이 무제한 합산된다는 뜻은 아닙니다. 완성도 및 발표 품질 점수는 실제 평가에 달려 있습니다.
 
 ## 4. 스테이지와 점수
 
@@ -132,7 +134,7 @@ ctest --test-dir build-vs -C Release --output-on-failure
 
 지형은 15×13입니다. 가장자리와 내부 짝수 좌표 교차점에 단단한 벽이 놓입니다. 부서지는 벽 배치는 스테이지별 고정 시드이므로 재시작 시 재현 가능합니다. 출발점과 인접 탈출 칸은 비워 두고, 각 스테이지에는 세 종류의 강화가 반드시 들어 있습니다. 출구는 `(13,9)`의 부서지는 벽 아래에 있습니다. 좌표는 좌상단부터 0 기준입니다.
 
-점수는 벽 파괴 +10, 아이템 +50, 일반·추격·고속 적 +200, 장갑 적 +400입니다. 클리어 보너스는 `1000 + max(0, 600 - floor(스테이지 경과 초) × 2)`입니다. 두 플레이어가 팀 점수를 공유하며 기록에 1P/2P가 구분됩니다.
+점수는 벽 파괴 +10, 아이템 +50, 일반·추격·고속 적 +200, 장갑 적 +400입니다. 클리어 보너스는 `1000 + max(0, 600 - floor(스테이지 경과 초) × 2)`입니다. 1인 플레이의 점수와 도달 스테이지를 기록합니다. 기존 점수 파일의 형식은 호환됩니다.
 
 실행 파일 옆 `scores.tsv`에 저장합니다(예: `build/scores.tsv`). 형식이 잘못된 줄은 무시하고, 임시 파일에 기록을 완료한 뒤 기존 파일을 교체합니다. 기능별 연습 장면은 **PRACTICE / UNRANKED**로 표시하며 랭킹에 기록하지 않습니다.
 
@@ -158,7 +160,7 @@ flowchart LR
 - 논리 맵은 정수 격자이고, 캐릭터 위치는 실수입니다. `(x+.5, y+.5)`가 칸 중심입니다.
 - `travel`과 `target`으로 한 칸의 이동 구간을 표현합니다. 매 틱 `speed × dt`만큼 이동하며 목표점까지의 남은 거리를 넘지 않습니다. 남는 거리는 다음 구간에서 처리합니다.
 - 방향 전환은 칸 중심에서 합니다. 플레이어의 다음 방향키 입력은 `buffered`에 보관해 중심에 도착했을 때 적용합니다. 대각선 이동과 벽 모서리 관통을 방지합니다.
-- 새 키 입력은 렌더 프레임의 **첫 물리 틱에서만** 버퍼에 저장합니다. 한 프레임에 2·4·8개의 물리 틱이 실행돼도 같은 입력을 다시 저장하지 않습니다. 짧게 한 번 누르면 한 칸 이동하고, 계속 누르면 등속으로 연속 이동합니다. 키를 놓으면 진행 중인 칸의 중심까지 이동한 뒤 멈춥니다. 입력 회귀 테스트 T59~62로 1인·2인 모두 확인합니다.
+- 새 키 입력은 렌더 프레임의 **첫 물리 틱에서만** 버퍼에 저장합니다. 한 프레임에 2·4·8개의 물리 틱이 실행돼도 같은 입력을 다시 저장하지 않습니다. 짧게 한 번 누르면 한 칸 이동하고, 계속 누르면 등속으로 연속 이동합니다. 키를 놓으면 진행 중인 칸의 중심까지 이동한 뒤 멈춥니다. 입력 회귀 테스트 T59~62로 짧은 입력·연속 이동·방향 전환을 확인합니다.
 - 다음 칸이 벽이나 폭탄이면 구간을 시작하지 않습니다. 이미 이동 중인데 목표 칸에 새 폭탄이 생기면 직전 중심 방향으로 되돌립니다.
 - 설치 직후 폭탄과 겹친 플레이어에게만 `passMask` 비트로 임시 통행 권한을 줍니다. 몸이 폭탄 칸을 완전히 벗어나면 권한을 지워 재진입을 막습니다.
 - 캐릭터와 화염/아이템 접촉은 원과 칸 AABB의 최근접점 거리로 판단합니다. 적과 플레이어는 두 중심 간 거리로 판단합니다. 몸의 반경까지 고려하므로 단순히 같은 칸인지 비교하는 것보다 자연스럽습니다.
@@ -174,14 +176,16 @@ flowchart LR
 각 방향에 대해:
     다음 칸 = 현재 칸 + 방향
     단단한 벽이면 종료
-    부서지는 벽이면 파괴·출구/아이템 노출
+    부서지는 벽이면 해당 칸에 화염 생성, 벽 파괴·출구/아이템 노출
         일반/원격 폭탄이면 그 방향 종료
         관통 폭탄이면 그 다음 칸으로 계속
     빈 칸이면 화염 생성, 기존 노출 아이템 제거
     다른 폭탄이면 큐에 넣고 그 방향 종료
 ```
 
-원본 p10 의사코드처럼 **일반 폭발은 부서지는 벽을 깨뜨린 칸 자체에 화염을 만들지 않습니다.** 따라서 그 폭발로 방금 노출된 아이템을 즉시 지우지 않습니다. 이후 그 칸에 도달한 화염은 아이템을 파괴합니다. 단단한 벽 칸에도 화염이 생기지 않습니다.
+**이번 요청에 따라 부서진 블록 칸에도 화염을 생성합니다.** 일반·원격 폭탄은 그 칸까지 태우고 멈추며 관통 폭탄은 계속 진행합니다. 단단한 벽 칸에는 화염이 생기지 않습니다.
+
+한 번의 연쇄폭발에 `waveId`를 부여하고, 방금 노출된 아이템에 `protectedWave`를 저장합니다. 같은 연쇄폭발이 그 칸을 여러 번 지나도 아이템은 살아남습니다. 해당 화염이 남아 있는 동안은 획득과 팝업 시간 진행을 보류하고, 화염이 사라지면 획득할 수 있습니다. 다른 `waveId`의 후속 폭발은 아이템을 파괴합니다.
 
 동일한 순간의 연쇄폭발은 전파 시작 시의 벽 배열을 복사해서 판단합니다. 먼저 처리한 폭탄이 벽을 지웠다는 이유로, 뒤의 일반 폭탄이 같은 순간에 그 벽을 뚫지 못하게 합니다. 관통 폭탄만 명시적으로 연성 벽을 통과합니다.
 
@@ -205,7 +209,7 @@ D 처리: []
 
 `shortestPath(from,to,8)`은 큐, 거리 배열 `dist`, 선행 칸 배열 `previous`를 사용합니다. 간선 비용이 모두 1인 네 방향 맵이므로 BFS의 최초 도달 경로가 최단 경로입니다. 벽과 폭탄 칸은 큐에 넣지 않습니다.
 
-거리 8인 칸까지 탐색하므로 **정확히 8칸은 추격**, 9칸 이상 또는 도달 불가능이면 일반 이동입니다. 목표에 도달하면 `previous`를 거슬러 경로를 복원하고, 처음 두 칸으로 다음 이동 방향을 정합니다. 2인 모드에서는 도달 가능한 두 플레이어의 경로 중 짧은 것을 고릅니다. 탐색은 칸 중심에 도착할 때 다시 수행합니다. F2는 동일한 점유 규칙의 전체 BFS 거리 지도로 탐색 영역 0~8을 표시하고, 최단 경로도 함께 그립니다. 여러 추격 적이 있으면 각 탐색 영역을 합쳐 표시합니다.
+거리 8인 칸까지 탐색하므로 **정확히 8칸은 추격**, 9칸 이상 또는 도달 불가능이면 일반 이동입니다. 목표에 도달하면 `previous`를 거슬러 경로를 복원하고, 처음 두 칸으로 다음 이동 방향을 정합니다. 탐색은 칸 중심에 도착할 때 다시 수행합니다. F2는 동일한 점유 규칙의 전체 BFS 거리 지도로 탐색 영역 0~8을 표시하고, 최단 경로도 함께 그립니다. 여러 추격 적이 있으면 각 탐색 영역을 합쳐 표시합니다.
 
 BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니다. 현재 `passable`이 폭탄 벡터를 선형 검색하므로 실제 최악 시간 상한은 **O(W×H×(1+B))**입니다. B는 설치된 폭탄 수입니다. 이 맵은 195칸이고, 추격 탐색은 깊이 8로 제한됩니다.
 
@@ -238,20 +242,20 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/game.hpp](src/game.hpp#L78) / [02] | L78~135 | 게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언 |
 | [src/game.cpp](src/game.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/game.cpp](src/game.cpp#L8) / [01] | L8~61 | 격자 방향 연산, 칸 중심·속도, 문자열·좌표 접근 |
-| [src/game.cpp](src/game.cpp#L62) / [02] | L62~133 | 고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환 |
-| [src/game.cpp](src/game.cpp#L134) / [03] | L134~189 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
-| [src/game.cpp](src/game.cpp#L190) / [04] | L190~242 | 벽·폭탄 점유 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
-| [src/game.cpp](src/game.cpp#L243) / [05] | L243~273 | 목표 중심까지 등속 이동, 새 장애물 회피, 폭탄 통행 권한 회수 |
-| [src/game.cpp](src/game.cpp#L274) / [06] | L274~313 | 소유자별 폭탄 용량, 겹침 권한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
-| [src/game.cpp](src/game.cpp#L314) / [07] | L314~347 | 폭발 큐·중복 제거·벽 스냅샷·네 방향 전파·즉시 연쇄반응 |
-| [src/game.cpp](src/game.cpp#L348) / [08] | L348~413 | 접촉 기하, 적 피해, 팀 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
-| [src/game.cpp](src/game.cpp#L414) / [09] | L414~445 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
-| [src/game.cpp](src/game.cpp#L446) / [10] | L446~465 | F2 표시용 전체 8칸 BFS 거리 지도 |
+| [src/game.cpp](src/game.cpp#L62) / [02] | L62~129 | 고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환 |
+| [src/game.cpp](src/game.cpp#L130) / [03] | L130~183 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
+| [src/game.cpp](src/game.cpp#L184) / [04] | L184~236 | 벽·폭탄 점유 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
+| [src/game.cpp](src/game.cpp#L237) / [05] | L237~267 | 목표 중심까지 등속 이동, 새 장애물 회피, 폭탄 통행 권한 회수 |
+| [src/game.cpp](src/game.cpp#L268) / [06] | L268~307 | 소유자별 폭탄 용량, 겹침 권한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
+| [src/game.cpp](src/game.cpp#L308) / [07] | L308~344 | 폭발 큐·중복 제거·벽 스냅샷·블록 칸 화염·폭발 waveId·즉시 연쇄반응 |
+| [src/game.cpp](src/game.cpp#L345) / [08] | L345~413 | 접촉 기하, 적 피해, 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
+| [src/game.cpp](src/game.cpp#L414) / [09] | L414~448 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
+| [src/game.cpp](src/game.cpp#L449) / [10] | L449~468 | F2 표시용 전체 8칸 BFS 거리 지도 |
 | [src/main.cpp](src/main.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/main.cpp](src/main.cpp#L16) / [01] | L16~74 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
-| [src/main.cpp](src/main.cpp#L75) / [02] | L75~108 | 방향키/WASD 1인 별칭·2인 키 분리, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
-| [src/main.cpp](src/main.cpp#L109) / [03] | L109~154 | Win32 창 메시지, 키 재입력 방지, 좌우 Ctrl/Shift 구분, 포커스 상실 처리 |
-| [src/main.cpp](src/main.cpp#L155) / [04] | L155~224 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
+| [src/main.cpp](src/main.cpp#L16) / [01] | L16~71 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
+| [src/main.cpp](src/main.cpp#L72) / [02] | L72~101 | 방향키 전용 1인 입력, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
+| [src/main.cpp](src/main.cpp#L102) / [03] | L102~141 | Win32 창 메시지, 키 반복 입력 방지, 포커스 상실 처리 |
+| [src/main.cpp](src/main.cpp#L142) / [04] | L142~217 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
 | [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
 | [src/renderer.hpp](src/renderer.hpp) | L1~53 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
@@ -267,10 +271,10 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/renderer.cpp](src/renderer.cpp#L372) / [09] | L372~390 | OpenGL front buffer 읽기와 BMP 파일 저장 |
 | [src/retro.cpp](src/retro.cpp) / 공통 선언 | L1~39 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/retro.cpp](src/retro.cpp#L40) / [01] | L40~103 | 1122(4) 색상·입체 면·방향광·반사광을 64x64 RGBA 텍스처로 캐시, 글자 중앙 정렬 |
-| [src/retro.cpp](src/retro.cpp#L104) / [02] | L104~175 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
-| [src/retro.cpp](src/retro.cpp#L176) / [03] | L176~226 | 1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분 HUD |
-| [src/retro.cpp](src/retro.cpp#L227) / [04] | L227~272 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
-| [src/retro.cpp](src/retro.cpp#L273) / [05] | L273~325 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
+| [src/retro.cpp](src/retro.cpp#L104) / [02] | L104~173 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
+| [src/retro.cpp](src/retro.cpp#L174) / [03] | L174~224 | 1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분 HUD |
+| [src/retro.cpp](src/retro.cpp#L225) / [04] | L225~270 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
+| [src/retro.cpp](src/retro.cpp#L271) / [05] | L271~323 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
 | [src/audio.hpp](src/audio.hpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/audio.hpp](src/audio.hpp#L8) / [01] | L8~23 | 별도 스레드·원자 플래그·mutex 이벤트 큐를 가진 오디오 인터페이스 |
 | [src/audio.cpp](src/audio.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
@@ -285,12 +289,12 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [tests/test_game.cpp](tests/test_game.cpp#L14) / [01] | L14~49 | 테스트 하네스·실패 집계·독립 빈 맵·시간 진행 도우미 |
 | [tests/test_game.cpp](tests/test_game.cpp#L50) / [02] | L50~127 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
 | [tests/test_game.cpp](tests/test_game.cpp#L128) / [03] | L128~210 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
-| [tests/test_game.cpp](tests/test_game.cpp#L211) / [04] | L211~339 | T37~58: 아이템·단계·특수 폭탄·협동·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
-| [tests/test_game.cpp](tests/test_game.cpp#L340) / [05] | L340~400 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·2인 입력 회귀 |
-| [tests/test_game.cpp](tests/test_game.cpp#L401) / [06] | L401~456 | T63~70: 직진 적·BFS 추격의 차이, 벽에서 나온 Fire 1→2와 상한, 탐색 영역·장애물·팝업 타이머 |
+| [tests/test_game.cpp](tests/test_game.cpp#L211) / [04] | L211~343 | T37~58: 아이템·단계·특수 폭탄·1인 고정·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
+| [tests/test_game.cpp](tests/test_game.cpp#L344) / [05] | L344~401 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·연속 탭 입력 회귀 |
+| [tests/test_game.cpp](tests/test_game.cpp#L402) / [06] | L402~480 | T63~73: 직진 적·BFS, Fire 획득별 범위 증가, 탐색 영역·팝업 시간, 부서진 칸 화염·연쇄폭발 아이템 보호·화염 접촉 |
 | [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [tests/test_controls.cpp](tests/test_controls.cpp#L8) / [01] | L8~35 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L36) / [02] | L36~111 | C01~C08: 홈·STAGE 시작, 8개 이동키·연속 이동·2인 분리, H/R/N·별칭·키 반복·다음 단계·재시작·원격 폭탄 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L36) / [02] | L36~113 | C01~C08: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~33 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~4 | 소스에 맞는 실행 파일을 찾는 run.ps1 호출 |
@@ -314,29 +318,29 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Game::Game` | [src/game.cpp:L60](src/game.cpp#L60) |
 | `Game::buildArena` | [src/game.cpp:L63](src/game.cpp#L63) |
 | `Game::newGame` | [src/game.cpp:L94](src/game.cpp#L94) |
-| `Game::loadStage` | [src/game.cpp:L105](src/game.cpp#L105) |
-| `Game::nextStage` | [src/game.cpp:L129](src/game.cpp#L129) |
-| `Game::loadScene` | [src/game.cpp:L135](src/game.cpp#L135) |
-| `Game::passable` | [src/game.cpp:L191](src/game.cpp#L191) |
-| `Game::shortestPath` | [src/game.cpp:L198](src/game.cpp#L198) |
-| `Game::chooseEnemyDirection` | [src/game.cpp:L223](src/game.cpp#L223) |
-| `Game::moveActor` | [src/game.cpp:L244](src/game.cpp#L244) |
-| `Game::placeBomb` | [src/game.cpp:L275](src/game.cpp#L275) |
-| `Game::detonateRemote` | [src/game.cpp:L291](src/game.cpp#L291) |
-| `Game::cycleBomb` | [src/game.cpp:L297](src/game.cpp#L297) |
-| `Game::reveal` | [src/game.cpp:L301](src/game.cpp#L301) |
-| `Game::addFlame` | [src/game.cpp:L307](src/game.cpp#L307) |
-| `Game::explodeBombs` | [src/game.cpp:L315](src/game.cpp#L315) |
-| `Game::touches` | [src/game.cpp:L349](src/game.cpp#L349) |
-| `Game::aliveEnemies` | [src/game.cpp:L354](src/game.cpp#L354) |
-| `Game::exitOpen` | [src/game.cpp:L357](src/game.cpp#L357) |
-| `Game::resetPositions` | [src/game.cpp:L358](src/game.cpp#L358) |
-| `Game::loseLife` | [src/game.cpp:L366](src/game.cpp#L366) |
-| `Game::resolveContacts` | [src/game.cpp:L373](src/game.cpp#L373) |
+| `Game::loadStage` | [src/game.cpp:L101](src/game.cpp#L101) |
+| `Game::nextStage` | [src/game.cpp:L125](src/game.cpp#L125) |
+| `Game::loadScene` | [src/game.cpp:L131](src/game.cpp#L131) |
+| `Game::passable` | [src/game.cpp:L185](src/game.cpp#L185) |
+| `Game::shortestPath` | [src/game.cpp:L192](src/game.cpp#L192) |
+| `Game::chooseEnemyDirection` | [src/game.cpp:L217](src/game.cpp#L217) |
+| `Game::moveActor` | [src/game.cpp:L238](src/game.cpp#L238) |
+| `Game::placeBomb` | [src/game.cpp:L269](src/game.cpp#L269) |
+| `Game::detonateRemote` | [src/game.cpp:L285](src/game.cpp#L285) |
+| `Game::cycleBomb` | [src/game.cpp:L291](src/game.cpp#L291) |
+| `Game::reveal` | [src/game.cpp:L295](src/game.cpp#L295) |
+| `Game::addFlame` | [src/game.cpp:L301](src/game.cpp#L301) |
+| `Game::explodeBombs` | [src/game.cpp:L309](src/game.cpp#L309) |
+| `Game::touches` | [src/game.cpp:L346](src/game.cpp#L346) |
+| `Game::aliveEnemies` | [src/game.cpp:L351](src/game.cpp#L351) |
+| `Game::exitOpen` | [src/game.cpp:L354](src/game.cpp#L354) |
+| `Game::resetPositions` | [src/game.cpp:L355](src/game.cpp#L355) |
+| `Game::loseLife` | [src/game.cpp:L363](src/game.cpp#L363) |
+| `Game::resolveContacts` | [src/game.cpp:L370](src/game.cpp#L370) |
 | `Game::togglePause` | [src/game.cpp:L415](src/game.cpp#L415) |
 | `Game::update` | [src/game.cpp:L419](src/game.cpp#L419) |
-| `Game::takeEvents` | [src/game.cpp:L442](src/game.cpp#L442) |
-| `Game::distanceMap` | [src/game.cpp:L447](src/game.cpp#L447) |
+| `Game::takeEvents` | [src/game.cpp:L445](src/game.cpp#L445) |
+| `Game::distanceMap` | [src/game.cpp:L450](src/game.cpp#L450) |
 | `Renderer::initialize` | [src/renderer.cpp:L59](src/renderer.cpp#L59) |
 | `Renderer::createFonts` | [src/renderer.cpp:L100](src/renderer.cpp#L100) |
 | `Renderer::resize` | [src/renderer.cpp:L118](src/renderer.cpp#L118) |
@@ -352,9 +356,9 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Renderer::initRetro` | [src/retro.cpp:L41](src/retro.cpp#L41) |
 | `Renderer::centered` | [src/retro.cpp:L98](src/retro.cpp#L98) |
 | `Renderer::retroBoard` | [src/retro.cpp:L105](src/retro.cpp#L105) |
-| `Renderer::retroHud` | [src/retro.cpp:L177](src/retro.cpp#L177) |
-| `Renderer::retroTitleScreen` | [src/retro.cpp:L228](src/retro.cpp#L228) |
-| `Renderer::retroOverlay` | [src/retro.cpp:L274](src/retro.cpp#L274) |
+| `Renderer::retroHud` | [src/retro.cpp:L175](src/retro.cpp#L175) |
+| `Renderer::retroTitleScreen` | [src/retro.cpp:L226](src/retro.cpp#L226) |
+| `Renderer::retroOverlay` | [src/retro.cpp:L272](src/retro.cpp#L272) |
 | `Audio::start` | [src/audio.cpp:L17](src/audio.cpp#L17) |
 | `Audio::play` | [src/audio.cpp:L23](src/audio.cpp#L23) |
 | `Audio::mute` | [src/audio.cpp:L24](src/audio.cpp#L24) |
@@ -368,7 +372,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 
 규칙 자동 테스트와 실제 GUI 확인 내역은 [검증 기록](docs/VALIDATION.md), 3분 이내 발표 동선은 [시연 순서](docs/DEMO_GUIDE.md)에 있습니다. 테스트를 다시 실행하면 결과가 콘솔에 표시됩니다.
 
-연습 장면은 준비된 배치로 기능을 빠르게 관찰하기 위한 기능입니다. 실제 규칙 엔진과 동일한 `Game::update`, `explodeBombs`, `shortestPath`, `resolveContacts`를 사용합니다. 연습 장면의 폭탄 배치와 능력은 시연을 위해 다르며, 일반 캠페인과 구분 표시합니다. 2인 연습에서는 오른쪽 아래 적과 겹치지 않도록 P2가 `(1,11)`에서 시작합니다.
+연습 장면은 준비된 배치로 기능을 빠르게 관찰하기 위한 기능입니다. 실제 규칙 엔진과 동일한 `Game::update`, `explodeBombs`, `shortestPath`, `resolveContacts`를 사용합니다. 연습 장면의 폭탄 배치와 능력은 시연을 위해 다르며, 일반 캠페인과 구분 표시합니다. 모든 연습 장면은 1인 전용이며 안전한 출발점에서 시작합니다.
 
 원본 PDF는 ETL에 프로젝트 ZIP 업로드와 3분 미만 데모를 안내합니다. `python scripts/package.py`를 실행하면 소스·빌드 스크립트·README·테스트·문서·실행 파일·원본 명세를 묶은 `dist/BomberLab-demo.zip`이 생성됩니다. ETL 제출은 별도로 진행합니다.
 
@@ -391,12 +395,13 @@ final_project/
     audio.hpp / .cpp         PCM 배경 음악·효과음
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체
     main.cpp                 창·입력·고정 틱·전체 수명 관리
-  tests/test_game.cpp         70개 게임 규칙·회귀 테스트
+  tests/test_game.cpp         73개 게임 규칙·회귀 테스트
   tests/test_controls.cpp     8개 Win32 입력·화면 전환 테스트
   scripts/update_code_map.py  README 줄 번호 자동 갱신
   scripts/package.py          배포 ZIP·SHA256 생성 및 무결성 검사
   docs/DEMO_GUIDE.md          발표용 시연 순서
   docs/VALIDATION.md          검증 내역
+  docs/CHANGES_1729.md        이번 수정 메모·직접 확인 순서
   docs/demo.png              실제 실행 화면
   build/BombermanDemo.exe     Windows x64 실행 파일
   build/bomber_tests.exe      테스트 실행 파일

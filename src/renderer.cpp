@@ -279,8 +279,8 @@ void Renderer::hud(const Game& game,const View& view) {
     panel(28,151,865,3,.12f,.25f,.30f);
     text(48,179,game.practice&&view.scene>=0?sceneName(Scene(view.scene)):"ARENA / "+std::string(game.stage==1?"FOUNDRY":game.stage==2?"DUNE WORKS":"NIGHT CIRCUIT"),0,.48f,.71f,.75f);
     panel(916,151,336,107);
-    text(936,179,"TEAM SCORE",0,.48f,.64f,.70f);text(934,226,paddedScore(game.score),2,.98f,.79f,.38f);
-    panel(916,272,336,103);text(936,302,"SHARED LIVES",0,.48f,.64f,.70f);
+    text(936,179,"SCORE",0,.48f,.64f,.70f);text(934,226,paddedScore(game.score),2,.98f,.79f,.38f);
+    panel(916,272,336,103);text(936,302,"LIVES",0,.48f,.64f,.70f);
     text(936,346,std::string(std::max(0,game.lives),'o')+"   /   "+std::to_string(game.lives)+" LEFT",1,.3f,.92f,.74f);
     int top=389;
     for(const auto& p:game.players) {
@@ -292,9 +292,9 @@ void Renderer::hud(const Game& game,const View& view) {
         text(936,float(top+85),"SPEED "+speed.str()+"    LV "+std::to_string(p.speedLevel),0,.55f,.68f,.74f);
         text(936,float(top+111),"ITEMS F/B/S  "+std::to_string(p.fireItemsCollected)+"/"+
              std::to_string(p.bombItemsCollected)+"/"+std::to_string(p.speedItemsCollected),0,.75f,.78f,.82f);
-        top+=game.players.size()==2?140:116;
+        top+=116;
     }
-    int objective=game.players.size()==2?670:536;
+    int objective=536;
     panel(916,float(objective),336,153);
     text(936,float(objective+29),"MISSION STATUS",0,.48f,.64f,.70f);
     text(936,float(objective+61),"HOSTILES    "+std::to_string(game.aliveEnemies()),1);
@@ -305,7 +305,7 @@ void Renderer::hud(const Game& game,const View& view) {
     std::string note=game.notice;
     if(note.size()>102)note.resize(102);
     text(43,825,note,0,.53f,.81f,.77f);
-    text(30,869,"WASD / MOVE    SPACE / BOMB    Q / TYPE    E / TRIGGER    P / PAUSE",0,.64f,.73f,.79f);
+    text(30,869,"ARROWS / MOVE    SPACE / BOMB    Q / TYPE    E / TRIGGER    P / PAUSE",0,.64f,.73f,.79f);
     text(918,822,"F1 HELP     F2 BFS     F3 LAB",0,.69f,.78f,.83f);
     text(918,850,"F4 CAMPAIGN     TAB RANKING",0,.48f,.64f,.70f);
     text(918,877,"F5 CAPTURE     ESC MENU",0,.48f,.64f,.70f);
@@ -319,23 +319,23 @@ void Renderer::overlay(const Game& game,const View& view) {
         if(view.ranks.empty())text(240,386,"No completed runs yet. Your first score goes here.");
         for(size_t i=0;i<view.ranks.size()&&i<10;++i) {
             const auto& r=view.ranks[i];
-            text(240,375+float(i)*28,std::to_string(i+1)+".   "+paddedScore(r.score)+"    S"+std::to_string(r.stage)+"    "+std::to_string(r.players)+"P    "+r.date);
+            text(240,375+float(i)*28,std::to_string(i+1)+".   "+paddedScore(r.score)+"    S"+std::to_string(r.stage)+"    "+r.date);
         }
         text(240,701,"TAB / CLOSE",0,.30f,.92f,.74f);return;
     }
     if(view.help) {
         panel(150,208,740,553,.055f,.095f,.14f);text(182,262,"FIELD MANUAL",2);
-        const char* rows[]={"P1 WASD (solo: also Arrows) / Space bomb / Q type / E remote",
-            "P2    Arrows move / Enter bomb / Right Ctrl type / Shift trigger",
+        const char* rows[]={"Arrows: move / Space: bomb / Q: type / E: remote",
+            "Single-player campaign. Three lives and three stages.",
             "P pause / N or M sound / F4 new run / Esc title / R ranking",
             "F2    Magenta BFS path: shortest route only within 8 cells",
             "F3    Next lab: Chain > Chase > Items > Exit > Specials > Life",
             "F4    Return to campaign       F5 save BMP screenshot",
-            "Crates hide FIRE (1->2), BOMB (+capacity), SPEED (+velocity).",
+            "Crates hide FIRE (+1 range each), BOMB (+capacity), SPEED (+velocity).",
             "Your own flames hurt. Newly revealed items survive that blast.",
             "PIERCE crosses crates. REMOTE waits for E or another flame.",
             "Orange roams / Magenta chases / Steel has 2 HP / Cyan is fast.",
-            "3 shared lives in co-op. Both players reset when either is hit.",
+            "Destroyed crate cells burn too. Wait for flames to clear.",
             "The exit stays locked until all enemies are defeated."};
         for(int i=0;i<12;++i)text(182,307.f+i*31,rows[i],0,i==0?.85f:.65f,.78f,.84f);
         text(182,733,"F1 / BACK TO ARENA",0,.3f,.92f,.74f);return;
@@ -344,7 +344,7 @@ void Renderer::overlay(const Game& game,const View& view) {
         panel(172,274,636,358,.045f,.080f,.12f);panel(172,274,636,4,.3f,.92f,.74f);
         text(211,322,"LIGHT THE FUSE.",2);text(211,360,"3D BOMBERMAN / COMPLETE PROJECT DEMO",0,.5f,.72f,.76f);
         text(211,420,"1    SOLO CAMPAIGN",1,.95f,.81f,.47f);
-        text(211,465,"2    LOCAL CO-OP",1,.3f,.92f,.74f);
+        text(211,465,"ARROWS    MOVE",1,.3f,.92f,.74f);
         text(211,510,"F3   GUIDED FEATURE LAB",1);
         text(211,570,"F1 / CONTROLS       TAB / RANKING",0,.57f,.70f,.77f);
         text(211,602,"Textures, lighting, BFS, items, sound and more.",0,.47f,.60f,.67f);return;

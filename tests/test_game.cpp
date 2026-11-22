@@ -25,8 +25,8 @@ static void at(Actor& actor,Cell c) {
     actor.x=c.x+.5f;actor.y=c.y+.5f;actor.spawn=actor.target=c;
     actor.direction=actor.travel=Direction::None;
 }
-static Game empty(int count=1) {
-    Game g;g.newGame(count);g.enemies.clear();g.bombs.clear();g.flames.clear();g.items.clear();
+static Game empty() {
+    Game g;g.newGame();g.enemies.clear();g.bombs.clear();g.flames.clear();g.items.clear();
     g.tiles.fill(Tile::Floor);g.hidden.fill(Item::None);
     for(int y=0;y<Height;++y)for(int x=0;x<Width;++x)
         if(x==0||y==0||x==Width-1||y==Height-1)g.setTile({x,y},Tile::Hard);
@@ -93,7 +93,7 @@ int main() {
     });
     test("11 soft block breaks and stops ray",[]{
         auto g=empty();g.setTile({6,5},Tile::Soft);addBomb(g,{5,5},4);g.explodeBombs({1});
-        require(g.tile({6,5})==Tile::Floor&&!fireAt(g,{6,5})&&!fireAt(g,{7,5}));
+        require(g.tile({6,5})==Tile::Floor&&fireAt(g,{6,5})&&!fireAt(g,{7,5}));
     });
     test("12 flames expire after half second",[]{
         auto g=empty();addBomb(g,{5,5});g.explodeBombs({1});advance(g,.4f);require(!g.flames.empty());
@@ -112,7 +112,7 @@ int main() {
     test("15 simultaneous rays do not tunnel through broken crates",[]{
         auto g=empty();g.setTile({5,5},Tile::Soft);addBomb(g,{3,5},5);addBomb(g,{7,5},5);
         g.explodeBombs({1,2});require(g.bombs.empty());
-        require(!fireAt(g,{5,5}));
+        require(fireAt(g,{5,5}));
         int atSix=0;for(const auto& f:g.flames)if(f.cell==Cell{6,5})++atSix;
         require(atSix==1,"left bomb crossed a same-wave soft block");
     });
@@ -209,10 +209,12 @@ int main() {
     });
 
     // [04] All advanced and extra-credit systems, including persistence.
-    test("37 newly revealed item survives revealing blast",[]{
+    test("37 newly revealed item survives flames until they expire",[]{
         auto g=empty();g.setTile({6,5},Tile::Soft);g.hidden[Game::index({6,5})]=Item::Fire;
         addBomb(g,{5,5});g.explodeBombs({1});g.resolveContacts();
-        require(g.items.size()==1&&g.items[0].item==Item::Fire);
+        require(fireAt(g,{6,5})&&g.items.size()==1&&g.items[0].item==Item::Fire);
+        advance(g,.4f);require(g.items.size()==1&&near(g.items[0].age,0));
+        advance(g,.15f);require(g.flames.empty()&&g.items.size()==1&&g.items[0].age>0);
     });
     test("38 fire / bomb / speed pickups modify independent abilities",[]{
         auto g=empty();g.items={{{1,1},Item::Fire},{{1,1},Item::Bomb},{{1,1},Item::Speed}};
@@ -240,7 +242,7 @@ int main() {
         auto g=empty();g.setTile({4,5},Tile::Soft);g.setTile({5,5},Tile::Soft);g.setTile({7,5},Tile::Hard);
         addBomb(g,{3,5},6,2.5f,BombKind::Pierce);g.explodeBombs({1});
         require(g.tile({4,5})==Tile::Floor&&g.tile({5,5})==Tile::Floor&&fireAt(g,{6,5}));
-        require(!fireAt(g,{7,5})&&!fireAt(g,{8,5}));
+        require(fireAt(g,{4,5})&&fireAt(g,{5,5})&&!fireAt(g,{7,5})&&!fireAt(g,{8,5}));
     });
     test("44 remote bomb has no timed fuse; owner can trigger",[]{
         auto g=empty();g.players[0].selected=BombKind::Remote;g.placeBomb(0);advance(g,8);
@@ -251,18 +253,20 @@ int main() {
         auto g=empty();addBomb(g,{3,5},3);addBomb(g,{5,5},2,-1,BombKind::Remote);
         g.explodeBombs({1});require(g.bombs.empty()&&fireAt(g,{7,5}));
     });
-    test("46 co-op has independent capacities and ownership",[]{
-        auto g=empty(2);require(g.players[1].cell()==Cell{13,11});
-        require(g.placeBomb(0)&&g.placeBomb(1)&&g.bombs.size()==2);
-        require(g.bombs[0].owner==0&&g.bombs[1].owner==1);
+    test("46 second-player actions are rejected and new games remain single-player",[]{
+        auto g=empty();require(g.players.size()==1&&Input{}.move.size()==1);
+        require(!g.placeBomb(1));g.cycleBomb(1);require(g.players[0].selected==BombKind::Normal);
+        g.players[0].range=2;g.players[0].fireItemsCollected=3;g.newGame();
+        require(g.players.size()==1&&g.players[0].range==1&&g.players[0].fireItemsCollected==0);
     });
-    test("47 simultaneous co-op contact costs one shared life",[]{
-        auto g=empty(2);for(auto& p:g.players){at(p,{5,5});p.invincible=0;}
-        addEnemy(g,{5,5});g.resolveContacts();require(g.lives==2);
-        require(g.players[0].invincible>0&&g.players[1].invincible>0);
+    test("47 simultaneous enemy and flame contacts cost one life",[]{
+        auto g=empty();at(g.players[0],{5,5});g.players[0].invincible=0;
+        addEnemy(g,{5,5});addEnemy(g,{5,5});g.flames.push_back({{5,5},.5f,0,1});
+        g.resolveContacts();require(g.lives==2&&g.players[0].invincible>0);
+        g.resolveContacts();require(g.lives==2);
     });
-    test("48 chaser targets nearest reachable co-op player",[]{
-        auto g=empty(2);at(g.players[0],{1,1});at(g.players[1],{7,5});
+    test("48 chaser targets the single reachable player",[]{
+        auto g=empty();at(g.players[0],{7,5});
         addEnemy(g,{5,5},EnemyKind::Chaser);advance(g,FixedStep);
         require(g.enemies[0].path.size()==3&&g.enemies[0].travel==Direction::Right);
     });
@@ -280,11 +284,11 @@ int main() {
         require(g.phase==Phase::Paused&&near(g.elapsed,0)&&near(g.bombs[0].fuse,2.5f));
         g.togglePause();advance(g,.1f);require(g.bombs[0].fuse<2.5f);
     });
-    test("52 all six labs are unranked with safe co-op spawn positions",[]{
+    test("52 all six labs are unranked with safe single-player spawns",[]{
         Game g;
         for(int i=0;i<6;++i) {
-            g.loadScene(Scene(i),2);
-            require(g.practice&&g.phase==Phase::Playing&&g.players.size()==2);
+            g.loadScene(Scene(i));
+            require(g.practice&&g.phase==Phase::Playing&&g.players.size()==1);
             for(const auto& p:g.players) {
                 require(g.tile(p.cell())==Tile::Floor);
                 for(const auto& e:g.enemies) {
@@ -382,20 +386,17 @@ int main() {
         require(near(g.players[0].x,2.5f)&&near(g.players[0].y,2.5f));
         require(buffered==Direction::None&&g.players[0].travel==Direction::None);
     });
-    test("62 co-op taps each move exactly one cell independently",[]{
-        auto g=empty(2);
-        std::array<Direction,2> buffered{Direction::None,Direction::None};
+    test("62 consecutive quick taps complete one cell each",[]{
+        auto g=empty();Direction buffered=Direction::None;
         for(int tick=0;tick<180;++tick) {
+            Direction pressed=tick<2?Direction::Right:tick>=100&&tick<102?Direction::Down:Direction::None;
             Input input;
-            for(int player=0;player<2;++player) {
-                Direction pressed=tick<2?(player==0?Direction::Right:Direction::Left):Direction::None;
-                input.move[player]=resolveMovement(buffered[player],pressed,pressed,tick%2==0,g.players[player],
-                    [&](Direction direction){return g.passable(offset(g.players[player].cell(),direction),player);});
-            }
+            input.move[0]=resolveMovement(buffered,pressed,Direction::None,tick%2==0,g.players[0],
+                [&](Direction direction){return g.passable(offset(g.players[0].cell(),direction),0);});
             g.update(FixedStep,input);
         }
-        require(near(g.players[0].x,2.5f)&&near(g.players[1].x,12.5f));
-        require(buffered[0]==Direction::None&&buffered[1]==Direction::None);
+        require(near(g.players[0].x,2.5f)&&near(g.players[0].y,2.5f));
+        require(buffered==Direction::None&&g.players[0].travel==Direction::None);
     });
 
     // [06] 1122(4) enemy behavior, range upgrades and full BFS overlay regressions.
@@ -432,7 +433,10 @@ int main() {
     });
     test("67 each fire pickup adds one range in a normal run",[]{
         auto g=empty();g.items={{{1,1},Item::Fire},{{1,1},Item::Fire},{{1,1},Item::Fire}};
-        g.resolveContacts();require(g.players[0].range==4&&g.score==150);
+        g.resolveContacts();require(g.players[0].range==4&&g.score==150&&g.players[0].fireItemsCollected==3);
+        at(g.players[0],{5,5});require(g.placeBomb(0)&&g.bombs[0].range==4);
+        at(g.players[0],{1,1});g.explodeBombs({1});
+        require(fireAt(g,{9,5})&&!fireAt(g,{10,5}));
     });
     test("68 BFS distance overlay includes full area up to eight cells",[]{
         auto g=empty();auto dist=g.distanceMap({1,1},8);
@@ -450,6 +454,26 @@ int main() {
         auto g=empty();g.items.push_back({{5,5},Item::Fire});
         advance(g,.1f);require(near(g.items[0].age,.1f));
         g.togglePause();advance(g,.4f);require(near(g.items[0].age,.1f));
+    });
+    test("71 same-wave crate hits preserve a drop but a later wave destroys it",[]{
+        auto g=empty();g.setTile({5,5},Tile::Soft);g.hidden[Game::index({5,5})]=Item::Speed;
+        addBomb(g,{3,5},5);addBomb(g,{7,5},5);g.explodeBombs({1,2});
+        g.resolveContacts();advance(g,.1f);
+        require(g.items.size()==1&&fireAt(g,{5,5}));
+        addBomb(g,{5,3},2);g.explodeBombs({3});require(g.items.empty());
+    });
+    test("72 a revealed pickup can be collected only after its flames expire",[]{
+        auto g=empty();g.setTile({6,5},Tile::Soft);g.hidden[Game::index({6,5})]=Item::Fire;
+        addBomb(g,{5,5});g.explodeBombs({1});at(g.players[0],{6,5});g.resolveContacts();
+        require(g.items.size()==1&&g.players[0].range==1);
+        advance(g,.45f);require(g.items.size()==1&&g.players[0].range==1);
+        advance(g,.1f);require(g.items.empty()&&g.players[0].range==2&&g.players[0].fireItemsCollected==1);
+    });
+    test("73 destroyed crate cell flames damage a player entering that cell",[]{
+        auto g=empty();g.setTile({6,5},Tile::Soft);addBomb(g,{5,5});g.explodeBombs({1});
+        require(fireAt(g,{6,5})&&!fireAt(g,{7,5}));
+        at(g.players[0],{6,5});g.players[0].spawn={1,1};g.players[0].invincible=0;g.resolveContacts();
+        require(g.lives==2&&g.players[0].cell()==Cell{1,1});
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;

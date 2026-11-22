@@ -1,3 +1,6 @@
+Base: 524dacd fire range update + uncommitted local changes
+GCC Release / CTest
+
 [PASS] 01 start upper-left, defaults and concealed exit
 [PASS] 02 cardinal velocity and time-step consistency
 [PASS] 03 hard wall collision
@@ -34,7 +37,7 @@
 [PASS] 34 revealed exit stays locked while enemies survive
 [PASS] 35 all enemies dead alone is insufficient for stage clear
 [PASS] 36 entering an open exit clears stage
-[PASS] 37 newly revealed item survives revealing blast
+[PASS] 37 newly revealed item survives flames until they expire
 [PASS] 38 fire / bomb / speed pickups modify independent abilities
 [PASS] 39 later flame destroys visible item
 [PASS] 40 capacity upgrade permits two active bombs
@@ -43,13 +46,13 @@
 [PASS] 43 piercing bomb crosses soft blocks but not hard walls
 [PASS] 44 remote bomb has no timed fuse; owner can trigger
 [PASS] 45 remote bomb participates in flame chain reaction
-[PASS] 46 co-op has independent capacities and ownership
-[PASS] 47 simultaneous co-op contact costs one shared life
-[PASS] 48 chaser targets nearest reachable co-op player
+[PASS] 46 second-player actions are rejected and new games remain single-player
+[PASS] 47 simultaneous enemy and flame contacts cost one life
+[PASS] 48 chaser targets the single reachable player
 [PASS] 49 armor takes two distinct blasts, not two flame frames
 [PASS] 50 swift enemy is faster but constant-speed
 [PASS] 51 pause freezes all clocks and bomb fuses
-[PASS] 52 all six labs are unranked with safe co-op spawn positions
+[PASS] 52 all six labs are unranked with safe single-player spawns
 [PASS] 53 all stages guarantee every item and a hidden exit
 [PASS] 54 deterministic seed produces reproducible stages
 [PASS] 55 local rankings round-trip, sort, cap top ten, ignore broken rows
@@ -59,22 +62,25 @@
 [PASS] 59 one tap moves one cell with multiple physics ticks per render
 [PASS] 60 held direction still moves continuously at normal speed
 [PASS] 61 a short perpendicular press stays buffered until the next center
-[PASS] 62 co-op taps each move exactly one cell independently
+[PASS] 62 consecutive quick taps complete one cell each
 [PASS] 63 wanderer keeps going straight at open crossroads
 [PASS] 64 chaser follows BFS while normal enemy ignores nearby player
 [PASS] 65 chaser outside BFS radius falls back to straight motion
 [PASS] 66 bomb reveals fire pickup and next bomb reaches exactly two cells
-[NOT RUN] 67 each fire pickup adds one range in a normal run
+[PASS] 67 each fire pickup adds one range in a normal run
 [PASS] 68 BFS distance overlay includes full area up to eight cells
 [PASS] 69 BFS distance overlay respects walls bombs and invalid origins
 [PASS] 70 visible item pop timer advances in play and freezes on pause
-70 passed, 0 failed
+[PASS] 71 same-wave crate hits preserve a drop but a later wave destroys it
+[PASS] 72 a revealed pickup can be collected only after its flames expire
+[PASS] 73 destroyed crate cell flames damage a player entering that cell
+73 passed, 0 failed
 [PASS] C01 Space starts STAGE 1 and skips ready without planting a bomb
-[PASS] C02 all eight solo Arrows/WASD keys move exactly one cell
+[PASS] C02 all four arrow keys move exactly one cell
 [PASS] C03 held arrow movement stays continuous at three cells per second
-[PASS] C04 arrows control only P2 in co-op and WASD controls only P1
+[PASS] C04 WASD and former second-player controls have no game action
 [PASS] C05 H R N and legacy aliases preserve modal input semantics
 [PASS] C06 Space advances to STAGE 2 ready screen with upgrades retained
 [PASS] C07 Space after game over resets lives and range for the new stage-one run
-[PASS] C08 P2 Right Ctrl Enter and Right Shift retain remote bomb controls
+[PASS] C08 Q Space and E retain single-player remote bomb controls
 8 controls passed, 0 failed

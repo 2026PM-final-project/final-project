@@ -66,13 +66,13 @@ struct Bomb {
 struct Flame {
     Cell cell;
     float ttl = FlameTime;
-    int owner = 0, blastId = 0;
+    int owner = 0, blastId = 0, waveId = 0;
 };
-struct Pickup { Cell cell; Item item = Item::None; float age = 0.f; };
+struct Pickup { Cell cell; Item item = Item::None; float age = 0.f; int protectedWave = 0; };
 struct Input {
-    std::array<Direction, 2> move{Direction::None, Direction::None};
-    std::array<bool, 2> place{false, false};
-    std::array<bool, 2> remote{false, false};
+    std::array<Direction, 1> move{Direction::None};
+    std::array<bool, 1> place{false};
+    std::array<bool, 1> remote{false};
 };
 
 // [02] Pure C++ simulation; no window, OpenGL, sound, or clock dependency.
@@ -80,7 +80,7 @@ class Game {
 public:
     std::array<Tile, Width * Height> tiles{};
     std::array<Item, Width * Height> hidden{};
-    std::vector<Player> players;
+    std::array<Player, 1> players{}; // 17:29: single-player mode only.
     std::vector<Enemy> enemies;
     std::vector<Bomb> bombs;
     std::vector<Flame> flames;
@@ -94,9 +94,9 @@ public:
     std::vector<Event> events;
 
     explicit Game(unsigned seed = 2026);
-    void newGame(int playerCount = 1);
+    void newGame();
     void loadStage(int number, bool keepAbilities = true);
-    void loadScene(Scene scene, int playerCount = 1);
+    void loadScene(Scene scene);
     void nextStage();
     void update(float dt, const Input& input = {});
     void togglePause();
@@ -122,13 +122,13 @@ public:
 private:
     std::mt19937 random;
     unsigned baseSeed;
-    int blastSequence = 0;
+    int blastSequence = 0, waveSequence = 0;
     void moveActor(Actor& actor, float distance, int playerId,
                    const std::function<Direction()>& choose);
     Direction chooseEnemyDirection(Enemy& enemy);
     void buildArena(unsigned seed);
-    void reveal(Cell cell);
-    void addFlame(Cell cell, int owner, int blastId);
+    void reveal(Cell cell, int waveId);
+    void addFlame(Cell cell, int owner, int blastId, int waveId);
 };
 const char* bombName(BombKind kind);
 const char* sceneName(Scene scene);

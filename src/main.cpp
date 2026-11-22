@@ -20,13 +20,12 @@ struct Application {
     Renderer renderer;
     Audio audio;
     std::array<bool,256> held{},pressed{};
-    std::array<Direction,2> buffered{Direction::None,Direction::None};
+    std::array<Direction,1> buffered{Direction::None};
     bool running=true,recorded=false,captureMode=false;
-    int count=1;
     std::filesystem::path directory;
 
-    void start(int players) {
-        count=std::clamp(players,1,2);game.newGame(count);recorded=false;view.menu=false;view.scene=-1;
+    void start() {
+        game.newGame();recorded=false;view.menu=false;view.scene=-1;
         view.help=false;view.ranking=false;view.readyTime=1.2f;buffered.fill(Direction::None);
     }
     bool tap(int key) {return key>=0&&key<256&&pressed[key];}
@@ -40,7 +39,7 @@ struct Application {
         if(tap(VK_ESCAPE)) {
             if(view.help)view.help=false;
             else if(view.ranking)view.ranking=false;
-            else {start(count);view.menu=true;view.readyTime=0;}
+            else {start();view.menu=true;view.readyTime=0;}
             return;
         }
         if(tap(VK_F5)) {
@@ -49,49 +48,43 @@ struct Application {
         }
         if(view.help||view.ranking)return;
         if(view.menu) {
-            if(tap('1')||tap(VK_SPACE)) {start(1);pressed[VK_SPACE]=false;}
-            else if(tap('2'))start(2);
+            if(tap('1')||tap(VK_SPACE)) {start();pressed[VK_SPACE]=false;}
         } else {
             if(tap('P'))game.togglePause();
             if(view.readyTime>0&&(tap(VK_SPACE)||tap(VK_RETURN))) {
                 view.readyTime=0;pressed[VK_SPACE]=pressed[VK_RETURN]=false;
             } else if((game.phase==Phase::GameOver||game.phase==Phase::Victory)&&tap(VK_SPACE)) {
-                start(count);pressed[VK_SPACE]=false;
+                start();pressed[VK_SPACE]=false;
             } else if(game.phase==Phase::StageClear&&(tap(VK_SPACE)||tap(VK_RETURN))) {
                 if(!game.practice) {game.nextStage();view.readyTime=1.2f;buffered.fill(Direction::None);}
                 pressed[VK_SPACE]=pressed[VK_RETURN]=false;
             }
             if(tap('Q'))game.cycleBomb(0);
-            if(tap(VK_RCONTROL))game.cycleBomb(1);
         }
         if(tap(VK_F3)) {
-            view.scene=(view.scene+1)%6;game.loadScene(Scene(view.scene),count);
+            view.scene=(view.scene+1)%6;game.loadScene(Scene(view.scene));
             view.menu=false;view.paths=true;view.readyTime=0;recorded=false;
             buffered.fill(Direction::None);
         }
-        if(tap(VK_F4))start(count);
+        if(tap(VK_F4))start();
     }
 
     // [02] Edge-triggered actions and buffered center turns, separate from held keys.
     Input input(bool firstStep) {
         Input input;
-        const int keys[2][4]={{'W','S','A','D'},{VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT}};
+        // 17:29: arrows are the only movement keys; continuous movement is unchanged.
+        const int keys[]={VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT};
         const Direction dirs[]={Direction::Up,Direction::Down,Direction::Left,Direction::Right};
-        for(int p=0;p<count&&p<2;++p) {
-            Direction pressedMove=Direction::None,heldMove=Direction::None;
-            for(int d=0;d<4;++d) {
-                bool edge=tap(keys[p][d]),down=keyHeld(keys[p][d]);
-                if(count==1) {edge=edge||tap(keys[1][d]);down=down||keyHeld(keys[1][d]);}
-                if(edge)pressedMove=dirs[d];
-                if(down)heldMove=dirs[d];
-            }
-            auto& actor=game.players[p];
-            input.move[p]=resolveMovement(buffered[p],pressedMove,heldMove,firstStep,actor,
-                [&](Direction direction) {return game.passable(offset(actor.cell(),direction),p);});
+        Direction pressedMove=Direction::None,heldMove=Direction::None;
+        for(int d=0;d<4;++d) {
+            if(tap(keys[d]))pressedMove=dirs[d];
+            if(keyHeld(keys[d]))heldMove=dirs[d];
         }
+        auto& actor=game.players[0];
+        input.move[0]=resolveMovement(buffered[0],pressedMove,heldMove,firstStep,actor,
+            [&](Direction direction) {return game.passable(offset(actor.cell(),direction),0);});
         if(firstStep) {
             input.place[0]=tap(VK_SPACE);input.remote[0]=tap('E');
-            if(count==2) {input.place[1]=tap(VK_RETURN);input.remote[1]=tap(VK_SHIFT);}
         }
         return input;
     }
@@ -99,7 +92,7 @@ struct Application {
     void record() {
         if(recorded||game.practice||(game.phase!=Phase::Victory&&game.phase!=Phase::GameOver))return;
         recorded=true;
-        if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,count,localDate()}))
+        if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,1,localDate()}))
             game.notice="Ranking could not be saved. Check folder write permission.";
         view.ranks=readScores(directory/L"scores.tsv");
     }
@@ -126,13 +119,9 @@ static LRESULT CALLBACK windowProcedure(HWND window,UINT message,WPARAM w,LPARAM
     case WM_KEYDOWN: case WM_SYSKEYDOWN:
         if(app) {
             int key=int(w);
-            bool shift=key==VK_SHIFT||key==VK_LSHIFT||key==VK_RSHIFT;
-            if(key==VK_CONTROL)key=(l&(1<<24))?VK_RCONTROL:VK_LCONTROL;
-            if(key==VK_SHIFT)key=MapVirtualKeyA((l>>16)&0xFF,MAPVK_VSC_TO_VK_EX);
             if(key>=0&&key<256) {
                 if(!(l&(1<<30))) {
                     app->pressed[key]=true;
-                    if(shift)app->pressed[VK_SHIFT]=true;
                 }
                 app->held[key]=true;
             }
@@ -142,8 +131,6 @@ static LRESULT CALLBACK windowProcedure(HWND window,UINT message,WPARAM w,LPARAM
     case WM_KEYUP: case WM_SYSKEYUP:
         if(app) {
             int key=int(w);
-            if(key==VK_CONTROL)key=(l&(1<<24))?VK_RCONTROL:VK_LCONTROL;
-            if(key==VK_SHIFT)key=MapVirtualKeyA((l>>16)&0xFF,MAPVK_VSC_TO_VK_EX);
             if(key>=0&&key<256)app->held[key]=false;
         }
         return 0;
@@ -177,13 +164,19 @@ int WINAPI WinMain(HINSTANCE instance,HINSTANCE,LPSTR commandLine,int show) {
     }
     RECT client{};GetClientRect(window,&client);app.renderer.resize(client.right,client.bottom);
     if(!capture.empty()) {
-        if(capture=="arena"||capture=="legacy"||capture=="ready")app.start(1);
-        if(capture=="coop")app.start(2);
+        if(capture=="arena"||capture=="legacy"||capture=="ready")app.start();
         if(capture!="ready")app.view.readyTime=0;
         if(capture=="legacy")app.view.retro=false;
         if(capture=="bfs") {app.game.loadScene(Scene::Chase);app.view.menu=false;app.view.paths=true;app.view.scene=1;}
+        if(capture=="flame") {
+            app.game.loadScene(Scene::Items);app.view.menu=false;app.view.scene=2;
+            auto& player=app.game.players[0];player.x=1.5f;player.y=2.5f;player.target={1,2};
+            int id=app.game.nextBombId++;
+            app.game.bombs.push_back({id,0,{2,1},1,0.f,BombKind::Normal,0});
+            app.game.explodeBombs({id});
+        }
         if(capture=="help")app.view.help=true;
-        if(capture=="stage2") {app.start(1);app.game.loadStage(2);app.view.readyTime=0;}
+        if(capture=="stage2") {app.start();app.game.loadStage(2);app.view.readyTime=0;}
         app.captureMode=true;
     } else app.audio.start();
     ShowWindow(window,show);UpdateWindow(window);

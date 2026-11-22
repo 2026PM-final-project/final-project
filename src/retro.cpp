@@ -144,7 +144,6 @@ void Renderer::retroBoard(const Game& game,const View& view) {
         rect(x+7,y-18,9,4,Gold);
         if(bomb.kind==BombKind::Remote)rect(x-5,y-4,10,7,{.4f,1,1});
         if(bomb.kind==BombKind::Pierce)rect(x-5,y-4,10,7,{1,.38f,.1f});
-        if(game.players.size()==2)text(x-4,y+7,std::to_string(bomb.owner+1),0,1,1,1);
     }
     for(const auto& flame:game.flames) {
         float x=BoardX+flame.cell.x*CellSize,y=BoardY+flame.cell.y*CellSize;
@@ -165,7 +164,6 @@ void Renderer::retroBoard(const Game& game,const View& view) {
         if(player.invincible>0&&int(view.time*12)%2)continue;
         float x=BoardX+player.x*CellSize,y=BoardY+player.y*CellSize;
         texture(retroTextures[player.id?7:3],x-20,y-20,40,40,{1,1,1});eyes(x,y);
-        if(game.players.size()==2)text(x-4,y+17,std::to_string(player.id+1),0,1,1,1);
     }
     if(view.paths)for(int y=0;y<Height;++y)for(int x=0;x<Width;++x) {
         int distance=distances[Game::index({x,y})];
@@ -173,10 +171,10 @@ void Renderer::retroBoard(const Game& game,const View& view) {
     }
 }
 
-// [03] Imported 1UP/HIGH SCORE/STAGE header, lives and F/B/S badges plus co-op HUD.
+// [03] Imported 1UP/HIGH SCORE/STAGE header, lives and F/B/S badges and single-player HUD.
 void Renderer::retroHud(const Game& game,const View& view) {
     rect(0,0,1280,900,{0,0,0});
-    centered(144,32,game.players.size()==2?"2UP / TEAM":"1UP",1,.31f,.86f,.45f);
+    centered(144,32,"1UP",1,.31f,.86f,.45f);
     centered(144,68,number(game.score),1,.96f,.96f,.96f);
     int best=std::max(game.score,view.ranks.empty()?0:view.ranks.front().score);
     centered(600,32,"HIGH SCORE",1,.94f,.26f,.22f);centered(600,68,number(best),1,.96f,.96f,.96f);
@@ -186,14 +184,14 @@ void Renderer::retroHud(const Game& game,const View& view) {
     auto card=[&](float y,float h){rect(840,y,390,h,{.035f,.035f,.05f});border(840,y,390,h,{.18f,.18f,.23f});};
     float top=138;
     for(const auto& player:game.players) {
-        card(top,game.players.size()==2?144.f:163.f);
+        card(top,163.f);
         text(862,top+31,"P"+std::to_string(player.id+1)+" / "+bombName(player.selected),1,player.id?.35f:.25f,.7f,1);
         int active=0;for(const auto& bomb:game.bombs)if(bomb.owner==player.id)++active;
         text(862,top+65,"FIRE "+std::to_string(player.range),0,1,.65f,.35f);
         text(862,top+94,"BOMBS "+std::to_string(active)+" / "+std::to_string(player.capacity),0,.75f,.82f,1);
         std::ostringstream speed;speed<<std::fixed<<std::setprecision(2)<<player.speed();
         text(862,top+123,"SPEED "+speed.str()+"  LV "+std::to_string(player.speedLevel),0,.62f,.84f,.46f);
-        top+=game.players.size()==2?159.f:182.f;
+        top+=182.f;
     }
     card(top,144);text(862,top+31,"ENEMIES / "+std::to_string(game.aliveEnemies()),1,.94f,.78f,.50f);
     text(862,top+65,"ORANGE  straight until blocked",0,.95f,.56f,.28f);
@@ -219,7 +217,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     text(1030,802,view.muted?"N SOUND OFF":"N SOUND ON",0,.88f,.86f,.36f);
     text(842,831,"H HELP / R RANKING / P PAUSE",0,.8f,.8f,.84f);
     text(842,859,"F3 LAB / F4 NEW / V 2D-3D",0,.66f,.66f,.74f);
-    std::string note=view.menu?"SPACE / START   2 / CO-OP   ARROWS OR WASD / MOVE":game.notice;
+    std::string note=view.menu?"SPACE / START   ARROWS / MOVE   SPACE / BOMB":game.notice;
     if(note.size()>77)note.resize(77);
     text(66,890,note,0,.78f,.78f,.53f);
 }
@@ -265,7 +263,7 @@ void Renderer::retroTitleScreen() {
     bomb(2,6);for(int x:{4,6,8,10,12})bomb(x,8);
 
     centered(640,784,"Press 'Space bar' to start",1,.90f,.94f,.37f);
-    centered(640,830,"1: SOLO       2: LOCAL CO-OP",0,.96f,.96f,.92f);
+    centered(640,830,"ARROWS: MOVE       SPACE: BOMB",0,.96f,.96f,.92f);
     centered(640,856,"H / F1: HELP       R / TAB: SCORE BOARD",0,.93f,.93f,.90f);
     centered(640,882,"N / M: SOUND ON / OFF",0,.93f,.93f,.90f);
 }
@@ -278,24 +276,24 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
         if(view.ranks.empty())centered(426,330,"No campaign records yet.",0,.90f,.90f,.84f);
         for(size_t i=0;i<view.ranks.size()&&i<10;++i) {
             const auto& row=view.ranks[i];
-            text(145,315+float(i)*30,std::to_string(i+1)+". "+number(row.score)+"  S"+std::to_string(row.stage)+"  "+std::to_string(row.players)+"P  "+row.date,0,.94f,.94f,.88f);
+            text(145,315+float(i)*30,std::to_string(i+1)+". "+number(row.score)+"  S"+std::to_string(row.stage)+"  "+row.date,0,.94f,.94f,.88f);
         }
         centered(426,691,"R / TAB / ESC  BACK",0,.88f,.87f,.38f);return;
     }
     if(view.help) {
         modal(70,170,720,601);centered(430,226,"HOW TO PLAY",2,1,.56f,.1f);
-        const char* rows[]={"SOLO  Arrows or WASD / Space: bomb",
-            "CO-OP P1: WASD + Space / P2: Arrows + Enter",
-            "Q / Right Ctrl: bomb type; E / Shift: remote",
+        const char* rows[]={"Arrows: move / Space: bomb",
+            "Single-player campaign / Three lives, three stages",
+            "Q: bomb type / E: remote detonation",
             "SPACE: start, skip ready screen, next stage, retry",
             "H/F1: help  R/Tab: ranking  N/M: sound",
             "P: pause  Esc: home  F4: new campaign",
             "F2: BFS area and distances 0-8 / yellow shortest route",
             "F3: feature labs / V: classic or original 3D view",
-            "FIRE: range 1 -> 2. Crates reveal the upgrade.",
+            "FIRE: +1 range per pickup. Crates reveal the upgrade.",
             "BOMB: capacity +1. SPEED: continuous movement speed +.",
             "Orange goes straight until blocked. Purple uses BFS.",
-            "Your own flames hurt. Defeated enemies stay defeated.",
+            "Broken crate cells burn too. Wait before taking drops.",
             "Defeat enemies, reveal the exit, then enter it."};
         for(int i=0;i<13;++i)text(96,274.f+i*33,rows[i],0,.87f,.87f,.83f);
         centered(430,745,"H / F1 / ESC  BACK",0,.88f,.87f,.38f);return;
@@ -305,7 +303,7 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
         centered(426,325,"BOMBERMAN",2,1,.56f,.09f);
         centered(426,377,"STAGE 1",1,.27f,.57f,1);
         centered(426,442,"Press SPACE to start",1,.86f,.92f,.35f);
-        centered(426,486,"1: SOLO      2: CO-OP",0,.95f,.95f,.90f);
+        centered(426,486,"ARROWS: MOVE     SPACE: BOMB",0,.95f,.95f,.90f);
         centered(426,532,"H: Help    R: Ranking    N: Sound",0,.78f,.78f,.82f);
         return;
     }

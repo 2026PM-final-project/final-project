@@ -26,18 +26,19 @@ static void frame(Application& app) {
 static void tap(Application& app,int key,LPARAM flags=0) {
     down(key,flags);frame(app);up(key);frame(app);
 }
-static void arena(Application& app,int count=1) {
-    application=&app;app.start(count);app.view.readyTime=0;
+static void arena(Application& app) {
+    application=&app;app.start();app.view.readyTime=0;
     app.game.enemies.clear();app.game.items.clear();app.game.bombs.clear();app.game.flames.clear();
     for(auto& tile:app.game.tiles)if(tile==Tile::Soft)tile=Tile::Floor;
     for(auto& player:app.game.players)player.invincible=1000;
 }
 
-// [02] Home/stage flow, both movement key layouts and all imported command aliases.
+// [02] Single-player home/stage flow, arrow-only movement and command aliases.
 int main() {
     test("C01 Space starts STAGE 1 and skips ready without planting a bomb",[]{
         Application app;application=&app;
         require(app.view.menu&&app.game.stage==1);
+        tap(app,'2');require(app.view.menu&&app.game.players.size()==1);
         tap(app,VK_SPACE);
         require(!app.view.menu&&app.view.readyTime>0&&app.frozen());
         require(app.game.bombs.empty()&&closeTo(app.game.elapsed,0));
@@ -45,11 +46,11 @@ int main() {
         require(app.view.readyTime==0&&!app.frozen()&&app.game.bombs.empty());
         tap(app,VK_SPACE);require(app.game.bombs.size()==1);
     });
-    test("C02 all eight solo Arrows/WASD keys move exactly one cell",[]{
+    test("C02 all four arrow keys move exactly one cell",[]{
         Application app;arena(app);
-        const int keys[]={VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT,'W','S','A','D'};
+        const int keys[]={VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT};
         const Direction directions[]={Direction::Up,Direction::Down,Direction::Left,Direction::Right};
-        for(int index=0;index<8;++index) {
+        for(int index=0;index<4;++index) {
             auto& player=app.game.players[0];player.x=player.y=5.5f;player.target={5,5};
             player.travel=player.direction=Direction::None;app.buffered.fill(Direction::None);
             tap(app,keys[index]);for(int i=0;i<45;++i)frame(app);
@@ -64,12 +65,15 @@ int main() {
         for(int i=0;i<30;++i)frame(app);
         require(closeTo(player.x,8.5f)&&closeTo(player.y,5.5f));
     });
-    test("C04 arrows control only P2 in co-op and WASD controls only P1",[]{
-        Application app;arena(app,2);
-        tap(app,VK_LEFT);for(int i=0;i<45;++i)frame(app);
-        require(closeTo(app.game.players[0].x,1.5f)&&closeTo(app.game.players[1].x,12.5f));
-        tap(app,'D');for(int i=0;i<45;++i)frame(app);
-        require(closeTo(app.game.players[0].x,2.5f)&&closeTo(app.game.players[1].x,12.5f));
+    test("C04 WASD and former second-player controls have no game action",[]{
+        Application app;arena(app);auto& player=app.game.players[0];
+        player.x=player.y=5.5f;player.target={5,5};
+        for(int key:{'W','A','S','D'}) {
+            tap(app,key);for(int i=0;i<45;++i)frame(app);
+            require(closeTo(player.x,5.5f)&&closeTo(player.y,5.5f));
+        }
+        tap(app,VK_RETURN);tap(app,VK_CONTROL,LPARAM(1)<<24);tap(app,VK_SHIFT);
+        require(app.game.bombs.empty()&&player.selected==BombKind::Normal&&app.game.players.size()==1);
     });
     test("C05 H R N and legacy aliases preserve modal input semantics",[]{
         Application app;arena(app);app.game.score=321;
@@ -97,13 +101,11 @@ int main() {
         require(app.game.stage==1&&app.game.lives==3&&app.game.score==0&&app.game.players[0].range==1);
         require(app.view.readyTime>0&&app.game.bombs.empty());
     });
-    test("C08 P2 Right Ctrl Enter and Right Shift retain remote bomb controls",[]{
-        Application app;arena(app,2);
-        tap(app,VK_CONTROL,LPARAM(1)<<24);tap(app,VK_CONTROL,LPARAM(1)<<24);
-        require(app.game.players[1].selected==BombKind::Remote);
-        tap(app,VK_RETURN);require(app.game.bombs.size()==1&&app.game.bombs[0].owner==1);
-        app.game.players[1].invincible=0;
-        tap(app,VK_SHIFT,LPARAM(0x36)<<16);
+    test("C08 Q Space and E retain single-player remote bomb controls",[]{
+        Application app;arena(app);
+        tap(app,'Q');tap(app,'Q');require(app.game.players[0].selected==BombKind::Remote);
+        tap(app,VK_SPACE);require(app.game.bombs.size()==1&&app.game.bombs[0].owner==0);
+        app.game.players[0].invincible=0;tap(app,'E');
         require(app.game.bombs.empty()&&app.game.lives==2);
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
