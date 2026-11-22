@@ -14,7 +14,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Tests failed to compile.' }
 & '.\build\bomber_tests.exe'
 if ($LASTEXITCODE -ne 0) { throw 'Rules test failed.' }
 if (-not $TestOnly) {
-    & $compilerPath @common '-mwindows' 'src/game.cpp' 'src/scores.cpp' 'src/main.cpp' 'src/renderer.cpp' 'src/audio.cpp' '-lopengl32' '-lgdi32' '-lwinmm' '-o' 'build/BombermanDemo.exe'
+    & $compilerPath @common '-mwindows' 'src/game.cpp' 'src/scores.cpp' 'src/main.cpp' 'src/renderer.cpp' 'src/retro.cpp' 'src/audio.cpp' '-lopengl32' '-lgdi32' '-lwinmm' '-o' 'build/BombermanDemo.exe'
     if ($LASTEXITCODE -ne 0) { throw 'Demo failed to compile. Close the running demo before rebuilding.' }
     Write-Host 'Ready: build\BombermanDemo.exe'
 }

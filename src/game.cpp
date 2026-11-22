@@ -160,7 +160,7 @@ void Game::loadScene(Scene scene, int count) {
     } else if (scene == Scene::Chase) {
         position(players[0], {7, 3}); enemy({1, 3}, EnemyKind::Chaser);
         enemy({13, 11}, EnemyKind::Wanderer);
-        notice = "Magenta follows BFS within 8 cells. F2: path. Move away to break pursuit.";
+        notice = "Purple follows BFS within 8 cells. F2: path. Move away to break pursuit.";
     } else if (scene == Scene::Items) {
         position(players[0], {1, 1});
         setTile({3, 1}, Tile::Soft); hidden[index({3, 1})] = Item::Fire;
@@ -228,13 +228,14 @@ Direction Game::chooseEnemyDirection(Enemy& e) {
         }
         if (e.path.size() > 1) return directionTo(e.path[0], e.path[1]);
     }
+    // The reference enemy keeps its direction until blocked; chasers use BFS first.
+    if (e.direction != Direction::None && passable(offset(e.cell(), e.direction)))
+        return e.direction;
     std::vector<Direction> choices;
     for (auto d : Directions) if (passable(offset(e.cell(), d))) choices.push_back(d);
     if (choices.empty()) return Direction::None;
     if (choices.size() > 1)
         choices.erase(std::remove(choices.begin(), choices.end(), reverse(e.direction)), choices.end());
-    if (std::find(choices.begin(), choices.end(), e.direction) != choices.end() && random() % 100 < 78)
-        return e.direction;
     return choices[random() % choices.size()];
 }
 
@@ -365,7 +366,7 @@ void Game::loseLife() {
     if (phase != Phase::Playing) return;
     --lives; events.push_back(Event::Hurt);
     bombs.clear(); flames.clear(); resetPositions();
-    if (lives <= 0) { phase = Phase::GameOver; notice = "No lives left. R: new run"; }
+    if (lives <= 0) { phase = Phase::GameOver; notice = "No lives left. Space: new run"; }
     else notice = "Life lost. Survivors reset. Brief spawn protection.";
 }
 void Game::resolveContacts() {
@@ -394,7 +395,7 @@ void Game::resolveContacts() {
             });
             if (burning) { it = items.erase(it); continue; }
             if (!touches(p, it->cell, .12f)) { ++it; continue; }
-            if (it->item == Item::Fire) ++p.range;
+            if (it->item == Item::Fire) p.range = std::max(p.range, 2);
             if (it->item == Item::Bomb) ++p.capacity;
             if (it->item == Item::Speed) ++p.speedLevel;
             score += 50; events.push_back(Event::Pickup); it = items.erase(it);
@@ -418,6 +419,7 @@ void Game::update(float dt, const Input& input) {
     if (phase != Phase::Playing || dt <= 0) return;
     dt = std::min(dt, .05f); elapsed += dt; stageElapsed += dt;
     for (auto& p : players) p.invincible = std::max(0.f, p.invincible - dt);
+    for (auto& item : items) item.age += dt;
     for (auto& f : flames) f.ttl -= dt;
     flames.erase(std::remove_if(flames.begin(), flames.end(), [](const Flame& f) { return f.ttl <= 0; }), flames.end());
     for (int i = 0; i < int(players.size()); ++i) {
@@ -438,5 +440,25 @@ void Game::update(float dt, const Input& input) {
 }
 std::vector<Event> Game::takeEvents() {
     auto result = std::move(events); events.clear(); return result;
+}
+
+// [10] Complete eight-cell BFS area for the imported F2 distance overlay.
+std::array<int, Width * Height> Game::distanceMap(Cell from, int maxDistance) const {
+    std::array<int, Width * Height> distances;
+    distances.fill(-1);
+    if (!inside(from) || tile(from) != Tile::Floor || maxDistance < 0) return distances;
+    std::queue<Cell> queue;
+    queue.push(from); distances[index(from)] = 0;
+    while (!queue.empty()) {
+        Cell cell = queue.front(); queue.pop();
+        if (distances[index(cell)] >= maxDistance) continue;
+        for (auto direction : Directions) {
+            Cell next = offset(cell, direction);
+            if (!passable(next) || distances[index(next)] >= 0) continue;
+            distances[index(next)] = distances[index(cell)] + 1;
+            queue.push(next);
+        }
+    }
+    return distances;
 }
 } // namespace bomber

@@ -397,6 +397,60 @@ int main() {
         require(near(g.players[0].x,2.5f)&&near(g.players[1].x,12.5f));
         require(buffered[0]==Direction::None&&buffered[1]==Direction::None);
     });
+
+    // [06] 1122(4) enemy behavior, range upgrades and full BFS overlay regressions.
+    test("63 wanderer keeps going straight at open crossroads",[]{
+        auto g=empty();addEnemy(g,{3,5});g.enemies[0].direction=Direction::Right;
+        for(int i=0;i<300;++i) {
+            g.update(FixedStep);
+            require(g.enemies[0].direction==Direction::Right);
+            require(near(g.enemies[0].y,5.5f));
+        }
+    });
+    test("64 chaser follows BFS while normal enemy ignores nearby player",[]{
+        auto normal=empty(),chase=empty();
+        at(normal.players[0],{5,3});at(chase.players[0],{5,3});
+        addEnemy(normal,{5,5});addEnemy(chase,{5,5},EnemyKind::Chaser);
+        normal.enemies[0].direction=chase.enemies[0].direction=Direction::Right;
+        normal.update(FixedStep);chase.update(FixedStep);
+        require(normal.enemies[0].travel==Direction::Right);
+        require(chase.enemies[0].travel==Direction::Up&&chase.enemies[0].path.size()==3);
+    });
+    test("65 chaser outside BFS radius falls back to straight motion",[]{
+        auto g=empty();at(g.players[0],{13,11});addEnemy(g,{5,3},EnemyKind::Chaser);
+        g.enemies[0].direction=Direction::Left;g.update(FixedStep);
+        require(g.enemies[0].path.empty()&&g.enemies[0].travel==Direction::Left);
+    });
+    test("66 bomb reveals fire pickup and next bomb reaches exactly two cells",[]{
+        auto g=empty();g.setTile({6,5},Tile::Soft);g.hidden[Game::index({6,5})]=Item::Fire;
+        require(g.players[0].range==1);addBomb(g,{5,5});g.explodeBombs({1});
+        require(g.items.size()==1&&g.items[0].item==Item::Fire);
+        g.flames.clear();at(g.players[0],{6,5});g.resolveContacts();
+        require(g.players[0].range==2&&g.items.empty());require(g.placeBomb(0));
+        require(g.bombs[0].range==2);at(g.players[0],{1,1});g.explodeBombs({2});
+        require(fireAt(g,{8,5})&&!fireAt(g,{9,5}));
+    });
+    test("67 repeated fire pickup stays at range two in a normal run",[]{
+        auto g=empty();g.items={{{1,1},Item::Fire},{{1,1},Item::Fire},{{1,1},Item::Fire}};
+        g.resolveContacts();require(g.players[0].range==2&&g.score==150);
+    });
+    test("68 BFS distance overlay includes full area up to eight cells",[]{
+        auto g=empty();auto dist=g.distanceMap({1,1},8);
+        require(dist[Game::index({1,1})]==0&&dist[Game::index({9,1})]==8);
+        require(dist[Game::index({10,1})]==-1&&dist[Game::index({1,9})]==8);
+        require(dist[Game::index({2,2})]==2);
+    });
+    test("69 BFS distance overlay respects walls bombs and invalid origins",[]{
+        auto g=empty();g.setTile({2,1},Tile::Hard);addBomb(g,{1,2},1,30);
+        auto dist=g.distanceMap({1,1});require(dist[Game::index({1,1})]==0);
+        require(std::count_if(dist.begin(),dist.end(),[](int d){return d>=0;})==1);
+        auto invalid=g.distanceMap({-1,-1});require(std::all_of(invalid.begin(),invalid.end(),[](int d){return d==-1;}));
+    });
+    test("70 visible item pop timer advances in play and freezes on pause",[]{
+        auto g=empty();g.items.push_back({{5,5},Item::Fire});
+        advance(g,.1f);require(near(g.items[0].age,.1f));
+        g.togglePause();advance(g,.4f);require(near(g.items[0].age,.1f));
+    });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;
 }
