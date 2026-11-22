@@ -172,7 +172,7 @@ int WINAPI WinMain(HINSTANCE instance,HINSTANCE,LPSTR commandLine,int show) {
             app.game.loadScene(Scene::Items);app.view.menu=false;app.view.scene=2;
             auto& player=app.game.players[0];player.x=1.5f;player.y=2.5f;player.target={1,2};
             int id=app.game.nextBombId++;
-            app.game.bombs.push_back({id,0,{2,1},1,0.f,BombKind::Normal,0});
+            app.game.bombs.push_back({id,0,{2,1},1,0.f,BombKind::Normal});
             app.game.explodeBombs({id});
         }
         if(capture=="help")app.view.help=true;

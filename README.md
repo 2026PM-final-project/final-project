@@ -71,6 +71,8 @@ ctest --test-dir build-vs -C Release --output-on-failure
 
 다른 창으로 포커스가 이동하면 입력을 비우고 진행 중인 게임을 일시정지합니다. 1인 전용이며 WASD와 2인용 시작·이동·폭탄 조작은 제거했습니다. 목숨은 3개로 시작합니다. 기존 연속 이동과 짧은 입력의 한 칸 이동은 유지합니다.
 
+**플레이어는 폭발 전의 폭탄 칸을 자유롭게 지나가고 다시 들어갈 수 있습니다.** 일반·관통·원격 폭탄 모두 적용하며, 폭발한 뒤의 화염에 닿으면 피해를 받습니다.
+
 **일반 캠페인의 화력은 기본 1칸이며, Fire 아이템을 획득할 때마다 사거리가 1칸씩 증가합니다.** 예를 들어 두 개를 주우면 기본 1칸에서 3칸이 됩니다. 부서지는 벽 아래 아이템은 폭탄으로 벽을 파괴할 때 팝업으로 나타납니다. 노출시킨 연쇄폭발의 화염에는 살아남고, 그 화염이 꺼진 뒤 획득할 수 있습니다. 다른 폭발의 화염에는 파괴됩니다. 일부 F3 연습 장면은 연쇄·관통 시연을 위해 더 큰 화력을 미리 설정합니다.
 
 게임에는 서로 다른 난수 시드로 만든 **15개 맵 레이아웃**이 있습니다. 새 캠페인은 시드로 맵 순서를 섞어 골라오며, 한 캠페인의 세 Stage는 서로 다른 레이아웃을 사용합니다. 내부 Hard block, Soft block, 출구, 숨은 아이템 좌표도 맵별로 달라집니다. 시작 구역과 Fire/Bomb/Speed 아이템 각 2개는 보장하고, 출구까지 걸어갈 수 있는 통로를 냅니다. 화면에 표시된 MAP 번호와 시드로 같은 레이아웃을 재현할 수 있습니다.
@@ -88,10 +90,10 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | p6 | 플레이어·적·단단한 벽·부서지는 벽·폭탄·화염·숨은 출구 | `Game::buildArena`, `Renderer::board` | T01, T53, 실제 화면 |
 | p6 | 좌상단 시작, 목숨 0 패배, 적 전멸 후 출구 진입 승리 | `newGame`, `loseLife`, `resolveContacts` | T01, T30, T34~36, T42 |
 | p7 / ① | 네 방향 등속 이동 | `moveActor`, `Player::speed` | T02 |
-| p7 / ② | 단단한 벽·부서지는 벽·폭탄 통과 금지 | `passable`, `moveActor` | T03~06 |
+| p7 / ② | 단단한 벽·부서지는 벽 통과 금지. 요청 변경으로 플레이어는 폭탄 통과 허용 | `passable`, `moveActor` | T03~06, T74~75 |
 | p8 / ③ | Space로 현재 칸에 폭탄 | `placeBomb`, `Application::input` | T05 |
 | p8 / ④ | 동시 설치 기본 용량 1 | `Player::capacity`, `placeBomb` | T05, T07, T40 |
-| p8 / ⑤ | 방금 놓은 폭탄에서 나갈 수 있지만 재진입 불가 | `Bomb::passMask`, `moveActor` | T06 |
+| p8 / ⑤ | 요청 변경: 폭발 전 폭탄 칸을 벗어난 뒤에도 재진입 허용 | `passable`, `moveActor` | T06, T74~76, C09 |
 | p9 / ⑥ | 일정 시간 뒤 폭발 | `FuseTime=2.5`, `update` | T08 |
 | p9~10 / ⑦ | 기본 화력 1, 십자 전파, 단단한 벽 차단, 연성 벽 파괴 및 사거리 내 계속 전파, 화염 소멸 | `explodeBombs`, `FlameTime=.5` | T09~12, T15 |
 | p11~12 / ⑧ | 화염에 닿은 다른 폭탄 즉시 연쇄폭발. BFS 큐 | `explodeBombs` | T13~16, F3 장면 1 |
@@ -163,8 +165,8 @@ flowchart LR
 - `travel`과 `target`으로 한 칸의 이동 구간을 표현합니다. 매 틱 `speed × dt`만큼 이동하며 목표점까지의 남은 거리를 넘지 않습니다. 남는 거리는 다음 구간에서 처리합니다.
 - 방향 전환은 칸 중심에서 합니다. 플레이어의 다음 방향키 입력은 `buffered`에 보관해 중심에 도착했을 때 적용합니다. 대각선 이동과 벽 모서리 관통을 방지합니다.
 - 새 키 입력은 렌더 프레임의 **첫 물리 틱에서만** 버퍼에 저장합니다. 한 프레임에 2·4·8개의 물리 틱이 실행돼도 같은 입력을 다시 저장하지 않습니다. 짧게 한 번 누르면 한 칸 이동하고, 계속 누르면 등속으로 연속 이동합니다. 키를 놓으면 진행 중인 칸의 중심까지 이동한 뒤 멈춥니다. 입력 회귀 테스트 T59~62로 짧은 입력·연속 이동·방향 전환을 확인합니다.
-- 다음 칸이 벽이나 폭탄이면 구간을 시작하지 않습니다. 이미 이동 중인데 목표 칸에 새 폭탄이 생기면 직전 중심 방향으로 되돌립니다.
-- 설치 직후 폭탄과 겹친 플레이어에게만 `passMask` 비트로 임시 통행 권한을 줍니다. 몸이 폭탄 칸을 완전히 벗어나면 권한을 지워 재진입을 막습니다.
+- 다음 칸이 벽이면 구간을 시작하지 않습니다. 적은 폭탄도 장애물로 취급하며, 이미 이동 중인 목표 칸에 새 폭탄이 생기면 직전 중심 방향으로 되돌립니다.
+- 플레이어는 일반·관통·원격 폭탄 칸을 자유롭게 통과하고 반복해서 재진입할 수 있습니다. 여러 폭탄을 연속으로 지나도 이동 속도는 같고, 폭발 후 화염 피해는 적용합니다. T06·T74~76과 실제 입력 테스트 C09로 검증합니다.
 - 캐릭터와 화염/아이템 접촉은 원과 칸 AABB의 최근접점 거리로 판단합니다. 적과 플레이어는 두 중심 간 거리로 판단합니다. 몸의 반경까지 고려하므로 단순히 같은 칸인지 비교하는 것보다 자연스럽습니다.
 
 일반 적은 현재 방향으로 갈 수 있으면 교차로에서도 계속 직진합니다. 막혔을 때만 통과 가능한 방향 중 하나를 선택하고, 다른 선택지가 있으면 즉시 U턴을 피합니다. chaser는 먼저 8칸 이하의 BFS 경로를 시도하고, 범위 밖이거나 도달할 수 없으면 일반 적과 같은 방식으로 이동합니다. 방향 결정은 칸 중심에서 하며, 두 종류 모두 기존 실수 좌표 등속 이동을 그대로 사용합니다.
@@ -240,19 +242,19 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | 파일 / 주석 | 현재 줄 범위 | 해당 코드의 역할 |
 |---|---|---|
 | [src/game.hpp](src/game.hpp) / 공통 선언 | L1~11 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/game.hpp](src/game.hpp#L12) / [01] | L12~77 | 상수·열거형·좌표·플레이어·적·폭탄·화염·입력 데이터 선언 |
-| [src/game.hpp](src/game.hpp#L78) / [02] | L78~135 | 게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언 |
-| [src/game.cpp](src/game.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/game.cpp](src/game.cpp#L8) / [01] | L8~61 | 격자 방향 연산, 칸 중심·속도, 문자열·좌표 접근 |
-| [src/game.cpp](src/game.cpp#L62) / [02] | L62~160 | 15개 시드 맵 선택, 무작위 Hard/Soft block·아이템·출구, 안전구역·통로 보장, 단계 전환 |
-| [src/game.cpp](src/game.cpp#L130) / [03] | L130~183 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
-| [src/game.cpp](src/game.cpp#L184) / [04] | L184~236 | 벽·폭탄 점유 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
-| [src/game.cpp](src/game.cpp#L237) / [05] | L237~267 | 목표 중심까지 등속 이동, 새 장애물 회피, 폭탄 통행 권한 회수 |
-| [src/game.cpp](src/game.cpp#L268) / [06] | L268~307 | 소유자별 폭탄 용량, 겹침 권한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
-| [src/game.cpp](src/game.cpp#L308) / [07] | L308~344 | 폭발 큐·중복 제거·벽 스냅샷·블록 칸 화염·폭발 waveId·즉시 연쇄반응 |
-| [src/game.cpp](src/game.cpp#L345) / [08] | L345~413 | 접촉 기하, 적 피해, 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
-| [src/game.cpp](src/game.cpp#L414) / [09] | L414~448 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
-| [src/game.cpp](src/game.cpp#L449) / [10] | L449~468 | F2 표시용 전체 8칸 BFS 거리 지도 |
+| [src/game.hpp](src/game.hpp#L12) / [01] | L12~76 | 상수·열거형·좌표·플레이어·적·폭탄·화염·입력 데이터 선언 |
+| [src/game.hpp](src/game.hpp#L77) / [02] | L77~142 | 게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언 |
+| [src/game.cpp](src/game.cpp) / 공통 선언 | L1~9 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [src/game.cpp](src/game.cpp#L10) / [01] | L10~80 | 격자 방향 연산, 칸 중심·속도, 문자열·좌표 접근 |
+| [src/game.cpp](src/game.cpp#L81) / [02] | L81~226 | 고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환 |
+| [src/game.cpp](src/game.cpp#L227) / [03] | L227~281 | 6개 연습 장면의 명시적인 초기 배치와 능력 설정 |
+| [src/game.cpp](src/game.cpp#L282) / [04] | L282~334 | 플레이어 폭탄 통과·적 장애물 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택 |
+| [src/game.cpp](src/game.cpp#L335) / [05] | L335~362 | 목표 중심까지 등속 이동, 벽 충돌과 적의 새 폭탄 회피 |
+| [src/game.cpp](src/game.cpp#L363) / [06] | L363~401 | 소유자별 폭탄 용량·중복 설치 제한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출 |
+| [src/game.cpp](src/game.cpp#L402) / [07] | L402~439 | 폭발 큐·중복 제거·벽 스냅샷·블록 칸 화염·폭발 waveId·즉시 연쇄반응 |
+| [src/game.cpp](src/game.cpp#L440) / [08] | L440~508 | 접촉 기하, 적 피해, 목숨·리스폰, 아이템 효과, 열린 출구 판정 |
+| [src/game.cpp](src/game.cpp#L509) / [09] | L509~543 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
+| [src/game.cpp](src/game.cpp#L544) / [10] | L544~563 | F2 표시용 전체 8칸 BFS 거리 지도 |
 | [src/main.cpp](src/main.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/main.cpp](src/main.cpp#L16) / [01] | L16~71 | 앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령 |
 | [src/main.cpp](src/main.cpp#L72) / [02] | L72~101 | 방향키 전용 1인 입력, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
@@ -289,14 +291,15 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/scores.cpp](src/scores.cpp#L44) / [02] | L44~70 | 임시 파일 완성 후 교체, 기존 파일 보존, 로컬 날짜 생성 |
 | [tests/test_game.cpp](tests/test_game.cpp) / 공통 선언 | L1~13 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [tests/test_game.cpp](tests/test_game.cpp#L14) / [01] | L14~49 | 테스트 하네스·실패 집계·독립 빈 맵·시간 진행 도우미 |
-| [tests/test_game.cpp](tests/test_game.cpp#L50) / [02] | L50~127 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
-| [tests/test_game.cpp](tests/test_game.cpp#L128) / [03] | L128~210 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
-| [tests/test_game.cpp](tests/test_game.cpp#L211) / [04] | L211~343 | T37~58: 아이템·단계·특수 폭탄·1인 고정·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
-| [tests/test_game.cpp](tests/test_game.cpp#L344) / [05] | L344~401 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·연속 탭 입력 회귀 |
-| [tests/test_game.cpp](tests/test_game.cpp#L402) / [06] | L402~480 | T63~73: 직진 적·BFS, Fire 획득별 범위 증가, 탐색 영역·팝업 시간, 부서진 칸 화염·연쇄폭발 아이템 보호·화염 접촉 |
+| [tests/test_game.cpp](tests/test_game.cpp#L50) / [02] | L50~139 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
+| [tests/test_game.cpp](tests/test_game.cpp#L140) / [03] | L140~222 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
+| [tests/test_game.cpp](tests/test_game.cpp#L223) / [04] | L223~373 | T37~58: 아이템·단계·특수 폭탄·1인 고정·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
+| [tests/test_game.cpp](tests/test_game.cpp#L374) / [05] | L374~431 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·연속 탭 입력 회귀 |
+| [tests/test_game.cpp](tests/test_game.cpp#L432) / [06] | L432~507 | T63~73: 직진 적·BFS, Fire 획득별 범위 증가, 탐색 영역·팝업 시간, 부서진 칸 화염·연쇄폭발 아이템 보호·화염 접촉 |
+| [tests/test_game.cpp](tests/test_game.cpp#L508) / [07] | L508~533 | T74~76: 여러 폭탄 연속 통과, 이동 중 나타난 폭탄 통과, 재진입 후 폭발 피해 |
 | [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L8) / [01] | L8~35 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L36) / [02] | L36~113 | C01~C08: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L8) / [01] | L8~37 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L38) / [02] | L38~127 | C01~C09: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~33 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~4 | 소스에 맞는 실행 파일을 찾는 run.ps1 호출 |
@@ -310,39 +313,41 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 
 | 함수 | 위치 |
 |---|---|
-| `Actor::cell` | [src/game.cpp:L29](src/game.cpp#L29) |
-| `Actor::centered` | [src/game.cpp:L30](src/game.cpp#L30) |
-| `Enemy::speed` | [src/game.cpp:L34](src/game.cpp#L34) |
-| `Game::inside` | [src/game.cpp:L56](src/game.cpp#L56) |
-| `Game::index` | [src/game.cpp:L57](src/game.cpp#L57) |
-| `Game::tile` | [src/game.cpp:L58](src/game.cpp#L58) |
-| `Game::setTile` | [src/game.cpp:L59](src/game.cpp#L59) |
-| `Game::Game` | [src/game.cpp:L60](src/game.cpp#L60) |
-| `Game::buildArena` | [src/game.cpp:L63](src/game.cpp#L63) |
-| `Game::newGame` | [src/game.cpp:L94](src/game.cpp#L94) |
-| `Game::loadStage` | [src/game.cpp:L101](src/game.cpp#L101) |
-| `Game::nextStage` | [src/game.cpp:L125](src/game.cpp#L125) |
-| `Game::loadScene` | [src/game.cpp:L131](src/game.cpp#L131) |
-| `Game::passable` | [src/game.cpp:L185](src/game.cpp#L185) |
-| `Game::shortestPath` | [src/game.cpp:L192](src/game.cpp#L192) |
-| `Game::chooseEnemyDirection` | [src/game.cpp:L217](src/game.cpp#L217) |
-| `Game::moveActor` | [src/game.cpp:L238](src/game.cpp#L238) |
-| `Game::placeBomb` | [src/game.cpp:L269](src/game.cpp#L269) |
-| `Game::detonateRemote` | [src/game.cpp:L285](src/game.cpp#L285) |
-| `Game::cycleBomb` | [src/game.cpp:L291](src/game.cpp#L291) |
-| `Game::reveal` | [src/game.cpp:L295](src/game.cpp#L295) |
-| `Game::addFlame` | [src/game.cpp:L301](src/game.cpp#L301) |
-| `Game::explodeBombs` | [src/game.cpp:L309](src/game.cpp#L309) |
-| `Game::touches` | [src/game.cpp:L346](src/game.cpp#L346) |
-| `Game::aliveEnemies` | [src/game.cpp:L351](src/game.cpp#L351) |
-| `Game::exitOpen` | [src/game.cpp:L354](src/game.cpp#L354) |
-| `Game::resetPositions` | [src/game.cpp:L355](src/game.cpp#L355) |
-| `Game::loseLife` | [src/game.cpp:L363](src/game.cpp#L363) |
-| `Game::resolveContacts` | [src/game.cpp:L370](src/game.cpp#L370) |
-| `Game::togglePause` | [src/game.cpp:L415](src/game.cpp#L415) |
-| `Game::update` | [src/game.cpp:L419](src/game.cpp#L419) |
-| `Game::takeEvents` | [src/game.cpp:L445](src/game.cpp#L445) |
-| `Game::distanceMap` | [src/game.cpp:L450](src/game.cpp#L450) |
+| `Actor::cell` | [src/game.cpp:L31](src/game.cpp#L31) |
+| `Actor::centered` | [src/game.cpp:L32](src/game.cpp#L32) |
+| `Enemy::speed` | [src/game.cpp:L36](src/game.cpp#L36) |
+| `Game::inside` | [src/game.cpp:L58](src/game.cpp#L58) |
+| `Game::index` | [src/game.cpp:L59](src/game.cpp#L59) |
+| `Game::tile` | [src/game.cpp:L60](src/game.cpp#L60) |
+| `Game::setTile` | [src/game.cpp:L61](src/game.cpp#L61) |
+| `Game::Game` | [src/game.cpp:L69](src/game.cpp#L69) |
+| `Game::Game` | [src/game.cpp:L70](src/game.cpp#L70) |
+| `Game::Game` | [src/game.cpp:L71](src/game.cpp#L71) |
+| `Game::buildArena` | [src/game.cpp:L82](src/game.cpp#L82) |
+| `Game::newGame` | [src/game.cpp:L177](src/game.cpp#L177) |
+| `Game::loadStage` | [src/game.cpp:L196](src/game.cpp#L196) |
+| `Game::nextStage` | [src/game.cpp:L222](src/game.cpp#L222) |
+| `Game::loadScene` | [src/game.cpp:L228](src/game.cpp#L228) |
+| `Game::passable` | [src/game.cpp:L283](src/game.cpp#L283) |
+| `Game::shortestPath` | [src/game.cpp:L290](src/game.cpp#L290) |
+| `Game::chooseEnemyDirection` | [src/game.cpp:L315](src/game.cpp#L315) |
+| `Game::moveActor` | [src/game.cpp:L336](src/game.cpp#L336) |
+| `Game::placeBomb` | [src/game.cpp:L364](src/game.cpp#L364) |
+| `Game::detonateRemote` | [src/game.cpp:L379](src/game.cpp#L379) |
+| `Game::cycleBomb` | [src/game.cpp:L385](src/game.cpp#L385) |
+| `Game::reveal` | [src/game.cpp:L389](src/game.cpp#L389) |
+| `Game::addFlame` | [src/game.cpp:L395](src/game.cpp#L395) |
+| `Game::explodeBombs` | [src/game.cpp:L403](src/game.cpp#L403) |
+| `Game::touches` | [src/game.cpp:L441](src/game.cpp#L441) |
+| `Game::aliveEnemies` | [src/game.cpp:L446](src/game.cpp#L446) |
+| `Game::exitOpen` | [src/game.cpp:L449](src/game.cpp#L449) |
+| `Game::resetPositions` | [src/game.cpp:L450](src/game.cpp#L450) |
+| `Game::loseLife` | [src/game.cpp:L458](src/game.cpp#L458) |
+| `Game::resolveContacts` | [src/game.cpp:L465](src/game.cpp#L465) |
+| `Game::togglePause` | [src/game.cpp:L510](src/game.cpp#L510) |
+| `Game::update` | [src/game.cpp:L514](src/game.cpp#L514) |
+| `Game::takeEvents` | [src/game.cpp:L540](src/game.cpp#L540) |
+| `Game::distanceMap` | [src/game.cpp:L545](src/game.cpp#L545) |
 | `Renderer::initialize` | [src/renderer.cpp:L59](src/renderer.cpp#L59) |
 | `Renderer::createFonts` | [src/renderer.cpp:L100](src/renderer.cpp#L100) |
 | `Renderer::resize` | [src/renderer.cpp:L118](src/renderer.cpp#L118) |
@@ -397,8 +402,8 @@ final_project/
     audio.hpp / .cpp         PCM 배경 음악·효과음
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체
     main.cpp                 창·입력·고정 틱·전체 수명 관리
-  tests/test_game.cpp         73개 게임 규칙·회귀 테스트
-  tests/test_controls.cpp     8개 Win32 입력·화면 전환 테스트
+  tests/test_game.cpp         79개 게임 규칙·회귀 테스트
+  tests/test_controls.cpp     9개 Win32 입력·화면 전환 테스트
   scripts/update_code_map.py  README 줄 번호 자동 갱신
   scripts/package.py          배포 ZIP·SHA256 생성 및 무결성 검사
   docs/DEMO_GUIDE.md          발표용 시연 순서

@@ -230,7 +230,8 @@ void Game::loadScene(Scene scene) {
     for (auto& t : tiles) if (t == Tile::Soft) t = Tile::Floor;
     hidden.fill(Item::None); exit = {13, 9}; setTile(exit, Tile::Soft);
     exitRevealed = false; notice = sceneName(scene);
-    auto position = [](Actor& a, Cell c) {
+    auto position = [&](Actor& a, Cell c) {
+        setTile(c, Tile::Floor);
         a.spawn = c; a.x = c.x + .5f; a.y = c.y + .5f; a.target = c;
         a.travel = a.direction = Direction::None;
     };
@@ -239,7 +240,7 @@ void Game::loadScene(Scene scene) {
         e.hp = kind == EnemyKind::Armored ? 2 : 1; enemies.push_back(e);
     };
     auto bomb = [&](Cell c, int range, float fuse, BombKind kind = BombKind::Normal) {
-        bombs.push_back({nextBombId++, 0, c, range, fuse, kind, 0});
+        bombs.push_back({nextBombId++, 0, c, range, fuse, kind});
     };
     if (scene == Scene::Chain) {
         position(players[0], {1, 1});
@@ -281,9 +282,9 @@ void Game::loadScene(Scene scene) {
 // [04] Static/dynamic occupancy and shortest paths (BFS with predecessor array).
 bool Game::passable(Cell c, int playerId) const {
     if (tile(c) != Tile::Floor) return false;
-    for (const auto& b : bombs) if (b.cell == c) {
-        if (playerId < 0 || !(b.passMask & (1u << playerId))) return false;
-    }
+    // Live bombs never block players; enemies and their BFS still avoid them.
+    if (playerId >= 0 && playerId < int(players.size())) return true;
+    for (const auto& b : bombs) if (b.cell == c) return false;
     return true;
 }
 std::vector<Cell> Game::shortestPath(Cell from, Cell to, int maxDistance) const {
@@ -356,13 +357,10 @@ void Game::moveActor(Actor& a, float distance, int playerId,
         if (a.travel == Direction::Up) a.y -= step;
         distance -= step;
         if (step >= remain - .00001f) { a.x = tx; a.y = ty; a.travel = Direction::None; }
-        // Once the bomber no longer intersects its bomb, re-entry is forbidden.
-        if (playerId >= 0) for (auto& b : bombs)
-            if (!touches(a, b.cell)) b.passMask &= ~(1u << playerId);
     }
 }
 
-// [06] Bomb ownership/capacity, overlap permission, and special bomb controls.
+// [06] Bomb ownership/capacity, placement, and special bomb controls.
 bool Game::placeBomb(int id) {
     if (phase != Phase::Playing || id < 0 || id >= int(players.size())) return false;
     auto& p = players[id];
@@ -374,8 +372,7 @@ bool Game::placeBomb(int id) {
     }
     if (active >= p.capacity) return false;
     Bomb b{nextBombId++, id, p.cell(), p.range,
-           p.selected == BombKind::Remote ? -1.f : FuseTime, p.selected, 0};
-    for (const auto& other : players) if (touches(other, b.cell)) b.passMask |= 1u << other.id;
+           p.selected == BombKind::Remote ? -1.f : FuseTime, p.selected};
     bombs.push_back(b); events.push_back(Event::Place);
     return true;
 }

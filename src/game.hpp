@@ -61,7 +61,6 @@ struct Bomb {
     int range = 1;
     float fuse = FuseTime;
     BombKind kind = BombKind::Normal;
-    unsigned passMask = 0;
 };
 struct Flame {
     Cell cell;

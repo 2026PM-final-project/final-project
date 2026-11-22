@@ -29,7 +29,9 @@ static void tap(Application& app,int key,LPARAM flags=0) {
 static void arena(Application& app) {
     application=&app;app.start();app.view.readyTime=0;
     app.game.enemies.clear();app.game.items.clear();app.game.bombs.clear();app.game.flames.clear();
-    for(auto& tile:app.game.tiles)if(tile==Tile::Soft)tile=Tile::Floor;
+    app.game.tiles.fill(Tile::Floor);
+    for(int y=0;y<Height;++y)for(int x=0;x<Width;++x)
+        if(x==0||y==0||x==Width-1||y==Height-1)app.game.setTile({x,y},Tile::Hard);
     for(auto& player:app.game.players)player.invincible=1000;
 }
 
@@ -107,6 +109,18 @@ int main() {
         tap(app,VK_SPACE);require(app.game.bombs.size()==1&&app.game.bombs[0].owner==0);
         app.game.players[0].invincible=0;tap(app,'E');
         require(app.game.bombs.empty()&&app.game.lives==2);
+    });
+    test("C09 arrow taps can repeatedly re-enter a bomb placed with Space",[]{
+        Application app;arena(app);auto& player=app.game.players[0];
+        player.x=player.y=5.5f;player.spawn=player.target={5,5};
+        tap(app,VK_SPACE);require(app.game.bombs.size()==1);
+        for(int crossing=0;crossing<2;++crossing) {
+            tap(app,VK_RIGHT);for(int i=0;i<22;++i)frame(app);
+            require(closeTo(player.x,6.5f)&&closeTo(player.y,5.5f));
+            tap(app,VK_LEFT);for(int i=0;i<22;++i)frame(app);
+            require(closeTo(player.x,5.5f)&&closeTo(player.y,5.5f));
+            require(app.game.bombs.size()==1&&app.game.lives==3);
+        }
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
     return failed?1:0;

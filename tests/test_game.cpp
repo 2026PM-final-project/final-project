@@ -41,7 +41,7 @@ static bool fireAt(const Game& g,Cell c) {
     return std::any_of(g.flames.begin(),g.flames.end(),[c](const Flame& f){return f.cell==c;});
 }
 static void addBomb(Game& g,Cell c,int range=1,float fuse=2.5f,BombKind kind=BombKind::Normal,int owner=0) {
-    g.bombs.push_back({g.nextBombId++,owner,c,range,fuse,kind,0});
+    g.bombs.push_back({g.nextBombId++,owner,c,range,fuse,kind});
 }
 static void addEnemy(Game& g,Cell c,EnemyKind kind=EnemyKind::Wanderer) {
     Enemy e;at(e,c);e.kind=kind;e.hp=kind==EnemyKind::Armored?2:1;g.enemies.push_back(e);
@@ -72,11 +72,21 @@ int main() {
         auto g=empty();require(g.placeBomb(0));require(g.bombs[0].cell==Cell{1,1});
         at(g.players[0],{3,1});require(!g.placeBomb(0));require(g.bombs.size()==1);
     });
-    test("06 step off own bomb then block re-entry",[]{
-        auto g=empty();g.placeBomb(0);Input i;i.move[0]=Direction::Right;
-        advance(g,1.f/3,i);require(near(g.players[0].x,2.5f));
-        require(!g.passable({1,1},0));i.move[0]=Direction::Left;advance(g,1.f/3,i);
-        require(near(g.players[0].x,2.5f));
+    test("06 players can leave and re-enter every bomb type in all directions",[]{
+        for(auto kind:{BombKind::Normal,BombKind::Pierce,BombKind::Remote})
+        for(auto direction:{Direction::Up,Direction::Down,Direction::Left,Direction::Right}) {
+            auto g=empty();at(g.players[0],{5,5});g.players[0].selected=kind;
+            require(g.placeBomb(0));
+            for(int crossing=0;crossing<2;++crossing) {
+                Input input;input.move[0]=direction;advance(g,1.f/3,input);
+                Cell adjacent=offset({5,5},direction);
+                require(near(g.players[0].x,adjacent.x+.5f)&&near(g.players[0].y,adjacent.y+.5f));
+                require(g.passable({5,5},0)&&!g.passable({5,5}));
+                input.move[0]=reverse(direction);advance(g,1.f/3,input);
+                require(near(g.players[0].x,5.5f)&&near(g.players[0].y,5.5f));
+                require(g.bombs.size()==1&&g.flames.empty()&&g.lives==3);
+            }
+        }
     });
     test("07 duplicate placement rejected",[]{auto g=empty();g.players[0].capacity=4;require(g.placeBomb(0));require(!g.placeBomb(0));});
     test("08 timed fuse is 2.5 seconds",[]{
@@ -287,19 +297,21 @@ int main() {
         g.togglePause();advance(g,.1f);require(g.bombs[0].fuse<2.5f);
     });
     test("52 all six labs are unranked with safe single-player spawns",[]{
-        Game g;
-        for(int i=0;i<6;++i) {
-            g.loadScene(Scene(i));
-            require(g.practice&&g.phase==Phase::Playing&&g.players.size()==1);
-            for(const auto& p:g.players) {
-                require(g.tile(p.cell())==Tile::Floor);
-                for(const auto& e:g.enemies) {
-                    float dx=p.x-e.x,dy=p.y-e.y;
-                    require(dx*dx+dy*dy>.48f*.48f,"lab spawns overlap");
+        for(unsigned seed=0;seed<32;++seed) {
+            Game g(seed);
+            for(int i=0;i<6;++i) {
+                g.loadScene(Scene(i));
+                require(g.practice&&g.phase==Phase::Playing&&g.players.size()==1);
+                for(const auto& p:g.players) {
+                    require(g.tile(p.cell())==Tile::Floor);
+                    for(const auto& e:g.enemies) {
+                        float dx=p.x-e.x,dy=p.y-e.y;
+                        require(dx*dx+dy*dy>.48f*.48f,"lab spawns overlap");
+                    }
                 }
+                auto bombCount=g.bombs.size();g.update(FixedStep);
+                require(g.lives==3&&g.bombs.size()==bombCount,"lab loses life immediately");
             }
-            auto bombCount=g.bombs.size();g.update(FixedStep);
-            require(g.lives==3&&g.bombs.size()==bombCount,"lab loses life immediately");
         }
     });
     test("53 all stages guarantee every item and a hidden exit",[]{
@@ -492,6 +504,29 @@ int main() {
         require(fireAt(g,{6,5})&&!fireAt(g,{7,5}));
         at(g.players[0],{6,5});g.players[0].spawn={1,1};g.players[0].invincible=0;g.resolveContacts();
         require(g.lives==2&&g.players[0].cell()==Cell{1,1});
+    });
+    // [07] Player movement through live bombs, including mid-segment placement.
+    test("74 players cross multiple live bombs at normal movement speed",[]{
+        auto g=empty();g.players[0].capacity=3;
+        for(int x=4;x<=6;++x) {at(g.players[0],{x,5});require(g.placeBomb(0));}
+        at(g.players[0],{3,5});Input input;input.move[0]=Direction::Right;
+        advance(g,4.f/3,input);
+        require(near(g.players[0].x,7.5f)&&near(g.players[0].y,5.5f));
+        require(g.bombs.size()==3&&g.flames.empty()&&g.lives==3);
+    });
+    test("75 a bomb appearing mid-step does not reverse player movement",[]{
+        auto g=empty();at(g.players[0],{3,5});Input input;input.move[0]=Direction::Right;
+        advance(g,FixedStep,input);require(g.players[0].target==Cell{4,5});
+        addBomb(g,{4,5});advance(g,1.f/3-FixedStep,input);
+        require(near(g.players[0].x,4.5f)&&near(g.players[0].y,5.5f));
+        require(g.bombs.size()==1&&g.lives==3);
+    });
+    test("76 a player standing on a re-entered bomb is hurt when it explodes",[]{
+        auto g=empty();g.players[0].invincible=0;require(g.placeBomb(0));
+        Input input;input.move[0]=Direction::Right;advance(g,1.f/3,input);
+        input.move[0]=Direction::Left;advance(g,1.f/3,input);
+        require(near(g.players[0].x,1.5f)&&g.bombs.size()==1&&g.lives==3);
+        advance(g,2.f);require(g.lives==2&&g.bombs.empty());
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;
