@@ -87,7 +87,6 @@ int main() {
         tap(app,'R');require(app.view.ranking&&app.game.score==321);
         tap(app,VK_TAB);require(!app.view.ranking);
         tap(app,'N');require(app.view.muted);tap(app,'M');require(!app.view.muted);
-        tap(app,'V');require(!app.view.retro);
         tap(app,VK_ESCAPE);require(app.view.menu&&app.game.stage==1&&app.game.score==0);
     });
     test("C06 Space advances to STAGE 2 ready screen with upgrades retained",[]{
@@ -120,6 +119,21 @@ int main() {
             tap(app,VK_LEFT);for(int i=0;i<22;++i)frame(app);
             require(closeTo(player.x,5.5f)&&closeTo(player.y,5.5f));
             require(app.game.bombs.size()==1&&app.game.lives==3);
+        }
+    });
+    test("C10 V has no action on home gameplay help ranking pause or stage ready",[]{
+        for(int screen=0;screen<6;++screen) {
+            Application app;arena(app);
+            if(screen==0)app.view.menu=true;
+            if(screen==2)app.view.help=true;
+            if(screen==3)app.view.ranking=true;
+            if(screen==4)app.game.togglePause();
+            if(screen==5)app.view.readyTime=1.2f;
+            for(int press=0;press<4;++press)tap(app,'V');
+            require(app.view.menu==(screen==0)&&app.view.help==(screen==2)&&app.view.ranking==(screen==3));
+            require(app.game.phase==(screen==4?Phase::Paused:Phase::Playing));
+            require((app.view.readyTime>0)==(screen==5));
+            require(app.game.bombs.empty()&&app.game.lives==3&&app.game.score==0);
         }
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";

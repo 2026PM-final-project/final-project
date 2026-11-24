@@ -35,7 +35,6 @@ struct Application {
         if(tap(VK_F2))view.paths=!view.paths;
         if(tap('N')||tap('M')) {view.muted=!view.muted;audio.mute(view.muted);}
         if(tap(VK_TAB)||tap('R')) {view.ranking=!view.ranking;view.help=false;}
-        if(tap('V'))view.retro=!view.retro;
         if(tap(VK_ESCAPE)) {
             if(view.help)view.help=false;
             else if(view.ranking)view.ranking=false;
@@ -164,9 +163,8 @@ int WINAPI WinMain(HINSTANCE instance,HINSTANCE,LPSTR commandLine,int show) {
     }
     RECT client{};GetClientRect(window,&client);app.renderer.resize(client.right,client.bottom);
     if(!capture.empty()) {
-        if(capture=="arena"||capture=="legacy"||capture=="ready")app.start();
+        if(capture=="arena"||capture=="ready")app.start();
         if(capture!="ready")app.view.readyTime=0;
-        if(capture=="legacy")app.view.retro=false;
         if(capture=="bfs") {app.game.loadScene(Scene::Chase);app.view.menu=false;app.view.paths=true;app.view.scene=1;}
         if(capture=="flame") {
             app.game.loadScene(Scene::Items);app.view.menu=false;app.view.scene=2;

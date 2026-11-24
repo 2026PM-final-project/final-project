@@ -179,7 +179,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     int best=std::max(game.score,view.ranks.empty()?0:view.ranks.front().score);
     centered(600,32,"HIGH SCORE",1,.94f,.26f,.22f);centered(600,68,number(best),1,.96f,.96f,.96f);
     centered(1094,32,"STAGE",1,.27f,.57f,1);centered(1094,68,std::to_string(game.stage),1,.96f,.96f,.96f);
-    centered(424,113,(view.retro?"BOMBERMAN":"BOMBER / 3D")+std::string(" / MAP ")+std::to_string(game.mapVariant)+"/15 / SEED "+std::to_string(game.mapSeed),0,.73f,.70f,.80f);
+    centered(424,113,"BOMBERMAN / MAP "+std::to_string(game.mapVariant)+"/15 / SEED "+std::to_string(game.mapSeed),0,.73f,.70f,.80f);
     border(62,136,724,628,{.18f,.18f,.23f});
     auto card=[&](float y,float h){rect(840,y,390,h,{.035f,.035f,.05f});border(840,y,390,h,{.18f,.18f,.23f});};
     float top=138;
@@ -216,7 +216,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     text(842,802,view.paths?"F2 PATH ON":"F2 PATH",0,.88f,.86f,.36f);
     text(1030,802,view.muted?"N SOUND OFF":"N SOUND ON",0,.88f,.86f,.36f);
     text(842,831,"H HELP / R RANKING / P PAUSE",0,.8f,.8f,.84f);
-    text(842,859,"F3 LAB / F4 NEW / V 2D-3D",0,.66f,.66f,.74f);
+    text(842,859,"F3 LAB / F4 NEW",0,.66f,.66f,.74f);
     std::string note=view.menu?"SPACE / START   ARROWS / MOVE   SPACE / BOMB":game.notice;
     if(note.size()>77)note.resize(77);
     text(66,890,note,0,.78f,.78f,.53f);
@@ -289,7 +289,7 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
             "H/F1: help  R/Tab: ranking  N/M: sound",
             "P: pause  Esc: home  F4: new campaign",
             "F2: BFS area and distances 0-8 / yellow shortest route",
-            "F3: feature labs / V: classic or original 3D view",
+            "F3: feature labs / F5: save screenshot",
             "FIRE: +1 range per pickup. Crates reveal the upgrade.",
             "BOMB: capacity +1. SPEED: continuous movement speed +.",
             "Orange goes straight until blocked. Purple uses BFS.",

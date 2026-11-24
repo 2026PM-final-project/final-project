@@ -15,7 +15,6 @@
 namespace bomber {
 struct View {
     bool menu = true, help = false, paths = false, muted = false, ranking = false;
-    bool retro = true;
     float readyTime = 0.f;
     int scene = -1;
     float time = 0;
@@ -31,7 +30,7 @@ public:
 private:
     HDC dc = nullptr;
     HGLRC context = nullptr;
-    GLuint fonts[4]{}, textures[3]{}, retroTextures[12]{};
+    GLuint fonts[4]{}, retroTextures[12]{};
     std::array<std::array<int, 128>, 4> fontWidths{};
     int width = 1280, height = 900;
     bool createFonts();
@@ -43,11 +42,7 @@ private:
     void centered(float x, float y, const std::string& str, int font,
                   float r, float g, float b);
     void ui();
-    void board(const Game& game, const View& view);
-    void hud(const Game& game, const View& view);
     void text(float x, float y, const std::string& str, int font = 0,
               float r = .87f, float g = .91f, float b = .94f);
-    void panel(float x, float y, float w, float h, float r = .055f, float g = .09f, float b = .13f);
-    void overlay(const Game& game, const View& view);
 };
 } // namespace bomber
