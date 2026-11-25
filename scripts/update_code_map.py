@@ -5,19 +5,20 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_FILES = [
     "src/game.hpp", "src/game.cpp", "src/main.cpp", "src/movement.hpp",
-    "src/renderer.hpp", "src/renderer.cpp", "src/retro.cpp",
+    "src/renderer.hpp", "src/viewport.hpp", "src/renderer.cpp", "src/retro.cpp",
     "src/audio.hpp", "src/audio.cpp", "src/scores.hpp", "src/scores.cpp",
     "tests/test_game.cpp", "tests/test_controls.cpp",
 ]
 DESCRIPTIONS = {
     "src/retro.cpp": ["1122(4) 색상·입체 면·방향광·반사광을 64x64 RGBA 텍스처로 캐시, 글자 중앙 정렬", "연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로", "1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분 HUD", "타이틀 로고·미리보기 맵·시작 안내의 홈 화면", "STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이"],
-    "tests/test_controls.cpp": ["실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스", "C01~C10: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작"],
+    "tests/test_controls.cpp": ["실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스", "C01~C12: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지"],
     "src/movement.hpp": ["렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리"],
     "src/game.hpp": ["상수·열거형·좌표·플레이어·적·폭탄·화염·입력 데이터 선언", "게임 상태와 공개 API, 내부 시드·이동·파괴 함수 선언"],
     "src/game.cpp": ["격자 방향 연산, 칸 중심·속도, 문자열·좌표 접근", "고정 시드 맵 생성, 시작 안전구역, 숨은 아이템·출구, 단계 전환", "6개 연습 장면의 명시적인 초기 배치와 능력 설정", "플레이어 폭탄 통과·적 장애물 판정, BFS 거리·선행 노드·경로 복원, 적의 방향 선택", "목표 중심까지 등속 이동, 벽 충돌과 적의 새 폭탄 회피", "소유자별 폭탄 용량·중복 설치 제한, 원격 기폭·종류 순환, 블록 파괴·아이템 노출", "폭발 큐·중복 제거·벽 스냅샷·블록 칸 화염·폭발 waveId·즉시 연쇄반응", "접촉 기하, 적 피해, 목숨·리스폰, 아이템 효과, 열린 출구 판정", "고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거", "F2 표시용 전체 8칸 BFS 거리 지도"],
     "src/main.cpp": ["앱 소유권, 홈·STAGE 준비·Space 시작/진행, H/R/N와 기존 별칭·시연·캡처 명령", "방향키 전용 1인 입력, 수정된 방향 버퍼 재사용, 기록 저장 조건", "Win32 창 메시지, 키 반복 입력 방지, 포커스 상실 처리", "창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제"],
     "src/renderer.hpp": [""],
-    "src/renderer.cpp": ["2D WGL 자원·폰트·텍스처 생성, 리사이즈·자원 해제", "2D 직교 좌표와 글꼴 출력", "2D 홈·보드·HUD·오버레이 합성", "OpenGL front buffer 읽기와 BMP 파일 저장"],
+    "src/viewport.hpp": ["1280×900 가상 캔버스 비율을 유지하는 중앙 뷰포트와 여백 계산"],
+    "src/renderer.cpp": ["2D WGL 자원·폰트·텍스처 생성, 비율을 유지하는 리사이즈·자원 해제", "2D 직교 좌표와 글꼴 출력", "2D 홈·보드·HUD·오버레이 합성", "OpenGL front buffer 읽기와 BMP 파일 저장"],
     "src/audio.hpp": ["별도 스레드·원자 플래그·mutex 이벤트 큐를 가진 오디오 인터페이스"],
     "src/audio.cpp": ["스레드 시작·종료, 음소거, 게임 이벤트를 사운드 큐로 전달", "waveOut 3중 버퍼, 배경 선율, 이벤트별 주파수·노이즈·감쇠 포락선 믹싱"],
     "src/scores.hpp": ["기록 데이터와 읽기·저장·날짜 함수 선언"],

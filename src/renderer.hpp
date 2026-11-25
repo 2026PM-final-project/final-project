@@ -9,6 +9,7 @@
 #include <GL/gl.h>
 #include "game.hpp"
 #include "scores.hpp"
+#include "viewport.hpp"
 #include <string>
 #include <vector>
 
@@ -32,7 +33,8 @@ private:
     HGLRC context = nullptr;
     GLuint fonts[4]{}, retroTextures[12]{};
     std::array<std::array<int, 128>, 4> fontWidths{};
-    int width = 1280, height = 900;
+    int width = CanvasWidth, height = CanvasHeight;
+    Viewport viewport{0, 0, CanvasWidth, CanvasHeight};
     bool createFonts();
     void initRetro();
     void retroBoard(const Game& game, const View& view);

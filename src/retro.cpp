@@ -98,7 +98,7 @@ void Renderer::initRetro() {
 void Renderer::centered(float x,float y,const std::string& str,int font,float r,float g,float b) {
     int pixels=0;
     for(unsigned char c:str)if(c<128)pixels+=fontWidths[font][c];
-    text(x-pixels*(1280.f/width)*.5f,y,str,font,r,g,b);
+    text(x-pixels*(float(CanvasWidth)/viewport.width)*.5f,y,str,font,r,g,b);
 }
 
 // [02] Textured board and shaded sprites follow the existing floating-point actors.

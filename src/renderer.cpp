@@ -21,7 +21,7 @@ bool Renderer::initialize(HWND window) {
 }
 bool Renderer::createFonts() {
     const int sizes[]={17,24,42,64};
-    float scale=std::min(width/1280.f,height/900.f);
+    float scale=std::min(float(viewport.width)/CanvasWidth,float(viewport.height)/CanvasHeight);
     for(int i=0;i<4;++i) {
         int pixels=std::max(8,int(std::round(sizes[i]*scale)));
         HFONT font=CreateFontA(-pixels,0,0,0,i==0?FW_NORMAL:FW_BOLD,FALSE,FALSE,FALSE,
@@ -38,8 +38,9 @@ bool Renderer::createFonts() {
     return true;
 }
 void Renderer::resize(int w,int h) {
-    int nextWidth=std::max(w,1),nextHeight=std::max(h,1);
-    bool changed=width!=nextWidth||height!=nextHeight;width=nextWidth;height=nextHeight;
+    const auto next=fitViewport(w,h);
+    bool changed=viewport.width!=next.width||viewport.height!=next.height;
+    width=std::max(w,1);height=std::max(h,1);viewport=next;
     if(changed&&context)createFonts();
 }
 void Renderer::shutdown() {
@@ -53,8 +54,8 @@ void Renderer::shutdown() {
 
 // [02] Screen-space projection and typography (reference canvas 1280 x 900).
 void Renderer::ui() {
-    glViewport(0,0,width,height);
-    glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,1280,900,0,-1,1);
+    glViewport(viewport.x,viewport.y,viewport.width,viewport.height);
+    glMatrixMode(GL_PROJECTION);glLoadIdentity();glOrtho(0,CanvasWidth,CanvasHeight,0,-1,1);
     glMatrixMode(GL_MODELVIEW);glLoadIdentity();
     glDisable(GL_TEXTURE_2D);glEnable(GL_BLEND);
 }
@@ -64,7 +65,7 @@ void Renderer::text(float x,float y,const std::string& s,int font,float r,float 
 }
 // [03] The title, board, HUD, and overlays all use the same 2D renderer.
 void Renderer::draw(const Game& game,const View& view) {
-    glClearColor(.025f,.042f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
     ui();
     if(view.menu&&!view.help&&!view.ranking)retroTitleScreen();
     else {retroHud(game,view);retroBoard(game,view);retroOverlay(game,view);}

@@ -226,7 +226,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 
 ### F. 렌더링, 시간 처리와 소리
 
-- 2D 화면: 1280×900 기준 직교 좌표계에 바닥·블록·캐릭터·HUD를 그립니다. 홈, STAGE 준비, 도움말, 랭킹, 게임 화면이 같은 2D 렌더러를 사용합니다.
+- 2D 화면: 1280×900 기준 직교 좌표계에 바닥·블록·캐릭터·HUD를 그립니다. 창 크기가 바뀌어도 이 비율을 유지하며 남는 공간은 검은 여백으로 채웁니다. 글꼴 크기와 가운데 정렬도 게임 화면 영역에 맞춰 조정합니다. 홈, STAGE 준비, 도움말, 랭킹, 게임 화면이 같은 2D 렌더러를 사용합니다.
 - 텍스처: 64×64 RGBA 바닥·돌·나무·캐릭터 이미지를 코드에서 만들고 `glTexImage2D`로 GPU에 업로드합니다. UV 좌표로 2D 사각형에 매핑합니다. 에셋 출처나 추가 다운로드가 필요하지 않습니다.
 - 효과: 텍스처에 그린 블록 면과 캐릭터 명암, 아이템 팝업, 반투명 화염, 출구 상태 표시를 사용합니다.
 - 시간: `steady_clock`으로 실시간을 읽고 accumulator에 모읍니다. 게임은 1/120초 고정 틱, 렌더링은 약 60FPS로 분리합니다. 긴 정지 후 과도한 따라잡기를 막기 위해 프레임 delta는 최대 0.1초입니다. 도움말·메뉴·랭킹·일시정지 중에는 게임 시계를 멈춥니다.
@@ -261,12 +261,14 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/main.cpp](src/main.cpp#L141) / [04] | L141~215 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
 | [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
-| [src/renderer.hpp](src/renderer.hpp) | L1~48 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
+| [src/renderer.hpp](src/renderer.hpp) | L1~50 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
+| [src/viewport.hpp](src/viewport.hpp) / 공통 선언 | L1~6 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [src/viewport.hpp](src/viewport.hpp#L7) / [01] | L7~25 | 1280×900 가상 캔버스 비율을 유지하는 중앙 뷰포트와 여백 계산 |
 | [src/renderer.cpp](src/renderer.cpp) / 공통 선언 | L1~6 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/renderer.cpp](src/renderer.cpp#L7) / [01] | L7~53 | 2D WGL 자원·폰트·텍스처 생성, 리사이즈·자원 해제 |
-| [src/renderer.cpp](src/renderer.cpp#L54) / [02] | L54~64 | 2D 직교 좌표와 글꼴 출력 |
-| [src/renderer.cpp](src/renderer.cpp#L65) / [03] | L65~73 | 2D 홈·보드·HUD·오버레이 합성 |
-| [src/renderer.cpp](src/renderer.cpp#L74) / [04] | L74~92 | OpenGL front buffer 읽기와 BMP 파일 저장 |
+| [src/renderer.cpp](src/renderer.cpp#L7) / [01] | L7~54 | 2D WGL 자원·폰트·텍스처 생성, 비율을 유지하는 리사이즈·자원 해제 |
+| [src/renderer.cpp](src/renderer.cpp#L55) / [02] | L55~65 | 2D 직교 좌표와 글꼴 출력 |
+| [src/renderer.cpp](src/renderer.cpp#L66) / [03] | L66~74 | 2D 홈·보드·HUD·오버레이 합성 |
+| [src/renderer.cpp](src/renderer.cpp#L75) / [04] | L75~93 | OpenGL front buffer 읽기와 BMP 파일 저장 |
 | [src/retro.cpp](src/retro.cpp) / 공통 선언 | L1~39 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/retro.cpp](src/retro.cpp#L40) / [01] | L40~103 | 1122(4) 색상·입체 면·방향광·반사광을 64x64 RGBA 텍스처로 캐시, 글자 중앙 정렬 |
 | [src/retro.cpp](src/retro.cpp#L104) / [02] | L104~173 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
@@ -293,13 +295,13 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [tests/test_game.cpp](tests/test_game.cpp#L508) / [07] | L508~533 | T74~76: 여러 폭탄 연속 통과, 이동 중 나타난 폭탄 통과, 재진입 후 폭발 피해 |
 | [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [tests/test_controls.cpp](tests/test_controls.cpp#L8) / [01] | L8~37 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L38) / [02] | L38~141 | C01~C10: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L38) / [02] | L38~169 | C01~C12: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~33 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~4 | 소스에 맞는 실행 파일을 찾는 run.ps1 호출 |
 | [run.ps1](run.ps1) | L1~27 | 소스보다 새 실행 파일 선택, 필요 시 GCC/MSBuild 빌드 후 실행 |
 | [scripts/package.py](scripts/package.py) | L1~34 | 검증된 소스·문서·실행 파일 묶기, ZIP 무결성 검사·SHA256 |
-| [scripts/update_code_map.py](scripts/update_code_map.py) | L1~71 | README 영역·함수 줄 번호 자동 갱신 |
+| [scripts/update_code_map.py](scripts/update_code_map.py) | L1~72 | README 영역·함수 줄 번호 자동 갱신 |
 
 ### 함수 찾기
 
@@ -345,11 +347,11 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Renderer::initialize` | [src/renderer.cpp:L8](src/renderer.cpp#L8) |
 | `Renderer::createFonts` | [src/renderer.cpp:L22](src/renderer.cpp#L22) |
 | `Renderer::resize` | [src/renderer.cpp:L40](src/renderer.cpp#L40) |
-| `Renderer::shutdown` | [src/renderer.cpp:L45](src/renderer.cpp#L45) |
-| `Renderer::ui` | [src/renderer.cpp:L55](src/renderer.cpp#L55) |
-| `Renderer::text` | [src/renderer.cpp:L61](src/renderer.cpp#L61) |
-| `Renderer::draw` | [src/renderer.cpp:L66](src/renderer.cpp#L66) |
-| `Renderer::screenshot` | [src/renderer.cpp:L75](src/renderer.cpp#L75) |
+| `Renderer::shutdown` | [src/renderer.cpp:L46](src/renderer.cpp#L46) |
+| `Renderer::ui` | [src/renderer.cpp:L56](src/renderer.cpp#L56) |
+| `Renderer::text` | [src/renderer.cpp:L62](src/renderer.cpp#L62) |
+| `Renderer::draw` | [src/renderer.cpp:L67](src/renderer.cpp#L67) |
+| `Renderer::screenshot` | [src/renderer.cpp:L76](src/renderer.cpp#L76) |
 | `Renderer::initRetro` | [src/retro.cpp:L41](src/retro.cpp#L41) |
 | `Renderer::centered` | [src/retro.cpp:L98](src/retro.cpp#L98) |
 | `Renderer::retroBoard` | [src/retro.cpp:L105](src/retro.cpp#L105) |
@@ -388,12 +390,13 @@ final_project/
     game.hpp / game.cpp      플랫폼 독립 게임 규칙
     movement.hpp             프레임별 이동 입력·회전 버퍼
     renderer.hpp / .cpp      2D OpenGL 자원·화면 합성·캡처
+    viewport.hpp             창 크기별 화면 비율·중앙 배치·여백 계산
     retro.cpp                1122(4) 클래식 화면·셰이딩·홈/STAGE/HUD
     audio.hpp / .cpp         PCM 배경 음악·효과음
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체
     main.cpp                 창·입력·고정 틱·전체 수명 관리
   tests/test_game.cpp         79개 게임 규칙·회귀 테스트
-  tests/test_controls.cpp     10개 Win32 입력·화면 전환 테스트
+  tests/test_controls.cpp     12개 Win32 입력·화면 전환 테스트
   scripts/update_code_map.py  README 줄 번호 자동 갱신
   scripts/package.py          배포 ZIP·SHA256 생성 및 무결성 검사
   docs/DEMO_GUIDE.md          발표용 시연 순서

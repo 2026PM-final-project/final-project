@@ -136,6 +136,34 @@ int main() {
             require(app.game.bombs.empty()&&app.game.lives==3&&app.game.score==0);
         }
     });
+    test("C11 canvas keeps its aspect ratio in native wide tall and restored windows",[]{
+        struct SizeCase {int width,height;Viewport expected;};
+        const SizeCase cases[]={
+            {1280,900,{0,0,1280,900}},
+            {1920,1080,{192,0,1536,1080}},
+            {1024,768,{0,24,1024,720}},
+            {1080,1440,{0,340,1080,759}},
+            {1280,900,{0,0,1280,900}}
+        };
+        for(const auto& size:cases) {
+            auto viewport=fitViewport(size.width,size.height);
+            require(viewport.x==size.expected.x&&viewport.y==size.expected.y);
+            require(viewport.width==size.expected.width&&viewport.height==size.expected.height);
+        }
+    });
+    test("C12 letterboxing stays centered and bounded including minimized windows",[]{
+        for(int width:{-1,0,1,640,1000,1280,1920,3840})
+        for(int height:{-1,0,1,480,740,900,1080,2160}) {
+            auto viewport=fitViewport(width,height);
+            const int clientWidth=std::max(width,1),clientHeight=std::max(height,1);
+            require(viewport.width>0&&viewport.height>0&&viewport.x>=0&&viewport.y>=0);
+            require(viewport.x+viewport.width<=clientWidth&&viewport.y+viewport.height<=clientHeight);
+            require(std::abs(2*viewport.x+viewport.width-clientWidth)<=1);
+            require(std::abs(2*viewport.y+viewport.height-clientHeight)<=1);
+            require(viewport.width==clientWidth||viewport.height==clientHeight);
+            require(std::abs(viewport.width*CanvasHeight-viewport.height*CanvasWidth)<CanvasWidth);
+        }
+    });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
     return failed?1:0;
 }
