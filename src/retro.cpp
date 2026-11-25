@@ -314,7 +314,7 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
     }
     if(game.phase==Phase::Playing)return;
     modal(118,316,612,232);
-    std::string title=game.phase==Phase::Paused?"PAUSED":game.phase==Phase::GameOver?"GAME OVER":game.phase==Phase::Victory?"CAMPAIGN CLEAR!":"STAGE CLEAR!";
+    std::string title=game.phase==Phase::Paused?"PAUSED":game.phase==Phase::GameOver?"GAME OVER":game.phase==Phase::Victory?"FINAL STAGE CLEAR!":"STAGE CLEAR!";
     centered(426,380,title,2,1,.69f,.20f);
     centered(426,430,"SCORE "+number(game.score),1,.95f,.95f,.86f);
     centered(426,498,game.phase==Phase::Paused?"P / RESUME":game.phase==Phase::StageClear?
