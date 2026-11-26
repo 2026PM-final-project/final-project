@@ -7,6 +7,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -527,6 +528,60 @@ int main() {
         input.move[0]=Direction::Left;advance(g,1.f/3,input);
         require(near(g.players[0].x,1.5f)&&g.bombs.size()==1&&g.lives==3);
         advance(g,2.f);require(g.lives==2&&g.bombs.empty());
+    });
+    // [08] Live, per-type speed tuning retains campaign behavior and default rules.
+    test("77 enemy speed settings start at defaults and change only the selected type",[]{
+        auto g=empty();
+        for(int index=0;index<4;++index)require(near(g.enemySpeed(EnemyKind(index)),DefaultEnemySpeeds[index]));
+        require(g.setEnemySpeed(EnemyKind::Chaser,2.4f));
+        require(near(g.enemySpeed(EnemyKind::Chaser),2.4f)&&g.speedTuningUsed);
+        require(near(g.enemySpeed(EnemyKind::Wanderer),1.65f));
+        require(near(g.enemySpeed(EnemyKind::Armored),1.4f)&&near(g.enemySpeed(EnemyKind::Swift),2.7f));
+        require(near(g.players[0].speed(),3.f));
+    });
+    test("78 every enemy type moves at the selected cells-per-second speed",[]{
+        for(int index=0;index<4;++index) {
+            auto g=empty();auto kind=EnemyKind(index);addEnemy(g,{5,5},kind);
+            g.enemies[0].direction=Direction::Right;g.setEnemySpeed(kind,3.5f);
+            advance(g,.2f);const auto& enemy=g.enemies[0];
+            require(near(std::abs(enemy.x-5.5f)+std::abs(enemy.y-5.5f),.7f));
+        }
+    });
+    test("79 mid-step speed changes and zero speed preserve position and resume smoothly",[]{
+        auto g=empty();addEnemy(g,{5,5});g.enemies[0].direction=Direction::Right;
+        g.setEnemySpeed(EnemyKind::Wanderer,1.f);advance(g,.1f);require(near(g.enemies[0].x,5.6f));
+        g.setEnemySpeed(EnemyKind::Wanderer,3.f);advance(g,.1f);require(near(g.enemies[0].x,5.9f));
+        g.setEnemySpeed(EnemyKind::Wanderer,0.f);advance(g,.5f);require(near(g.enemies[0].x,5.9f));
+        g.setEnemySpeed(EnemyKind::Wanderer,6.f);advance(g,.1f);require(near(g.enemies[0].x,6.5f));
+    });
+    test("80 speed values clamp and snap while non-finite values and invalid types are ignored",[]{
+        auto g=empty();
+        require(!g.setEnemySpeed(EnemyKind::Wanderer,std::numeric_limits<float>::quiet_NaN()));
+        require(!g.setEnemySpeed(EnemyKind::Wanderer,std::numeric_limits<float>::infinity()));
+        require(!g.setEnemySpeed(EnemyKind(-1),2.f)&&!g.setEnemySpeed(EnemyKind(4),2.f));
+        require(!g.speedTuningUsed&&near(g.enemySpeed(EnemyKind::Wanderer),1.65f));
+        g.setEnemySpeed(EnemyKind::Wanderer,1.234f);require(near(g.enemySpeed(EnemyKind::Wanderer),1.25f));
+        g.setEnemySpeed(EnemyKind::Wanderer,100.f);require(near(g.enemySpeed(EnemyKind::Wanderer),6.f));
+        g.setEnemySpeed(EnemyKind::Wanderer,-10.f);require(near(g.enemySpeed(EnemyKind::Wanderer),0.f));
+    });
+    test("81 speed profiles persist across deaths stages and campaigns and resets require a fresh ranked run",[]{
+        auto g=empty();g.setEnemySpeed(EnemyKind::Chaser,2.35f);g.loseLife();
+        require(near(g.enemySpeed(EnemyKind::Chaser),2.35f)&&g.speedTuningUsed);
+        g.phase=Phase::StageClear;g.nextStage();require(g.stage==2&&near(g.enemySpeed(EnemyKind::Chaser),2.35f));
+        g.newGame();require(g.stage==1&&near(g.enemySpeed(EnemyKind::Chaser),2.35f)&&g.speedTuningUsed);
+        g.resetEnemySpeeds();require(near(g.enemySpeed(EnemyKind::Chaser),2.15f)&&g.speedTuningUsed);
+        g.newGame();require(!g.speedTuningUsed);
+        Game independent(77);require(!independent.speedTuningUsed&&near(independent.enemySpeed(EnemyKind::Chaser),2.15f));
+    });
+    test("82 touching default values does not mark a run as tuned and manual restoration is canonical",[]{
+        auto g=empty();
+        for(int index=0;index<4;++index)require(!g.setEnemySpeed(EnemyKind(index),DefaultEnemySpeeds[index]));
+        g.resetEnemySpeeds();require(!g.speedTuningUsed);
+        for(int index=0;index<4;++index) {
+            g.setEnemySpeed(EnemyKind(index),3.f);
+            g.setEnemySpeed(EnemyKind(index),DefaultEnemySpeeds[index]);
+        }
+        require(g.speedTuningUsed);g.newGame();require(!g.speedTuningUsed);
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;

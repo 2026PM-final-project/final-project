@@ -34,10 +34,25 @@ bool Actor::centered() const {
            std::abs(y - (std::floor(y) + .5f)) < .001f;
 }
 float Enemy::speed() const {
-    if (kind == EnemyKind::Swift) return 2.7f;
-    if (kind == EnemyKind::Chaser) return 2.15f;
-    if (kind == EnemyKind::Armored) return 1.4f;
-    return 1.65f;
+    const auto index = static_cast<unsigned>(kind);
+    return DefaultEnemySpeeds[index < DefaultEnemySpeeds.size() ? index : 0];
+}
+float Game::enemySpeed(EnemyKind kind) const {
+    const auto index = static_cast<unsigned>(kind);
+    return index < enemySpeeds.size() ? enemySpeeds[index] : 0.f;
+}
+bool Game::setEnemySpeed(EnemyKind kind, float speed) {
+    const auto index = static_cast<unsigned>(kind);
+    if (index >= enemySpeeds.size() || !std::isfinite(speed)) return false;
+    speed = std::round(std::clamp(speed, MinEnemySpeed, MaxEnemySpeed) / EnemySpeedStep) * EnemySpeedStep;
+    if (std::abs(speed - DefaultEnemySpeeds[index]) < .001f) speed = DefaultEnemySpeeds[index];
+    if (std::abs(enemySpeeds[index] - speed) < .001f) return false;
+    enemySpeeds[index] = speed; speedTuningUsed = true;
+    return true;
+}
+void Game::resetEnemySpeeds() {
+    if (enemySpeeds == DefaultEnemySpeeds) return;
+    enemySpeeds = DefaultEnemySpeeds; speedTuningUsed = true;
 }
 const char* bombName(BombKind k) {
     if (k == BombKind::Pierce) return "PIERCE";
@@ -188,6 +203,7 @@ void Game::newGame() {
     }
     if(randomizeSeedOnNewGame) lastCampaignFirstVariant=stageMapVariants[0];
     practice = false;
+    speedTuningUsed = enemySpeeds != DefaultEnemySpeeds;
     score = 0; lives = 3; elapsed = 0; nextBombId = 1; blastSequence = waveSequence = 0;
     players.fill(Player{});
     events.clear();
@@ -528,7 +544,7 @@ void Game::update(float dt, const Input& input) {
         moveActor(p, p.speed() * dt, i, [&] { return input.move[i]; });
     }
     for (auto& e : enemies) if (e.alive)
-        moveActor(e, e.speed() * dt, -1, [&] { return chooseEnemyDirection(e); });
+        moveActor(e, enemySpeed(e.kind) * dt, -1, [&] { return chooseEnemyDirection(e); });
     std::vector<int> expired;
     for (auto& b : bombs) {
         if (b.kind != BombKind::Remote) { b.fuse -= dt; if (b.fuse <= 0) expired.push_back(b.id); }

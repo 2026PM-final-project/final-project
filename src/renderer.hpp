@@ -16,16 +16,22 @@
 namespace bomber {
 struct View {
     bool menu = true, help = false, paths = false, muted = false, ranking = false;
+    bool speedPanel = true;
+    int draggedSpeed = -1;
     float readyTime = 0.f;
     int scene = -1;
     float time = 0;
     std::vector<RankEntry> ranks;
+    bool canTuneSpeeds(const Game& game) const {
+        return speedPanel&&!menu&&!help&&!ranking&&(game.phase==Phase::Playing||game.phase==Phase::Paused);
+    }
 };
 class Renderer {
 public:
     bool initialize(HWND window);
     void draw(const Game& game, const View& view);
     void resize(int width, int height);
+    CanvasPoint canvasPosition(int x, int y) const;
     bool screenshot(const std::wstring& path);
     void shutdown();
 private:
@@ -41,6 +47,7 @@ private:
     void retroHud(const Game& game, const View& view);
     void retroOverlay(const Game& game, const View& view);
     void retroTitleScreen();
+    void speedPanel(const Game& game, const View& view);
     void centered(float x, float y, const std::string& str, int font,
                   float r, float g, float b);
     void ui();

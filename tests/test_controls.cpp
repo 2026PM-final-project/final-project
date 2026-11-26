@@ -18,6 +18,9 @@ static void test(const char* name,const std::function<void()>& body) {
 }
 static void down(int key,LPARAM flags=0){windowProcedure(nullptr,WM_KEYDOWN,WPARAM(key),flags);}
 static void up(int key){windowProcedure(nullptr,WM_KEYUP,WPARAM(key),0);}
+static void mouse(UINT message,int x,int y,WPARAM buttons=0) {
+    windowProcedure(nullptr,message,buttons,MAKELPARAM(x,y));
+}
 static void frame(Application& app) {
     app.commands();
     for(int tick=0;tick<2;++tick)if(!app.frozen())app.game.update(FixedStep,app.input(tick==0));
@@ -163,6 +166,77 @@ int main() {
             require(viewport.width==clientWidth||viewport.height==clientHeight);
             require(std::abs(viewport.width*CanvasHeight-viewport.height*CanvasWidth)<CanvasWidth);
         }
+    });
+    test("C13 all four sliders respond to native mouse drag and clamp captured movement",[]{
+        Application app;arena(app);
+        for(int row=0;row<4;++row) {
+            int y=int(speedControls::trackY(row));auto kind=speedControls::Kinds[row];
+            mouse(WM_LBUTTONDOWN,int(speedControls::Left),y,MK_LBUTTON);
+            require(app.view.draggedSpeed==row&&closeTo(app.game.enemySpeed(kind),0.f));
+            mouse(WM_MOUSEMOVE,1500,y,MK_LBUTTON);require(closeTo(app.game.enemySpeed(kind),6.f));
+            mouse(WM_MOUSEMOVE,-50,y,MK_LBUTTON);require(closeTo(app.game.enemySpeed(kind),0.f));
+            mouse(WM_LBUTTONUP,1035,y);require(closeTo(app.game.enemySpeed(kind),3.f)&&app.view.draggedSpeed==-1);
+            mouse(WM_MOUSEMOVE,1205,y,MK_LBUTTON);require(closeTo(app.game.enemySpeed(kind),3.f));
+        }
+    });
+    test("C14 slider hit testing follows wide and tall letterboxed viewports",[]{
+        for(auto size:{Cell{1920,1080},Cell{1000,1000}}) {
+            Application app;arena(app);windowProcedure(nullptr,WM_SIZE,0,MAKELPARAM(size.x,size.y));
+            auto viewport=fitViewport(size.x,size.y);int top=size.y-viewport.y-viewport.height;
+            int x=int(std::round(viewport.x+speedControls::thumbX(2.4f)*viewport.width/CanvasWidth));
+            int y=int(std::round(top+speedControls::trackY(1)*viewport.height/CanvasHeight));
+            mouse(WM_LBUTTONDOWN,x,y,MK_LBUTTON);mouse(WM_LBUTTONUP,x,y);
+            require(closeTo(app.game.enemySpeed(EnemyKind::Chaser),2.4f));
+            mouse(WM_LBUTTONDOWN,0,0,MK_LBUTTON);require(app.view.draggedSpeed==-1);
+        }
+    });
+    test("C15 reset restores all defaults and F6 hides and reopens the controls",[]{
+        Application app;arena(app);
+        for(auto kind:speedControls::Kinds)app.game.setEnemySpeed(kind,4.f);
+        mouse(WM_LBUTTONDOWN,900,674,MK_LBUTTON);mouse(WM_LBUTTONUP,900,674);
+        for(int index=0;index<4;++index)require(closeTo(app.game.enemySpeed(EnemyKind(index)),DefaultEnemySpeeds[index]));
+        require(app.game.speedTuningUsed);
+        tap(app,VK_F6);require(!app.view.speedPanel);
+        mouse(WM_LBUTTONDOWN,1205,416,MK_LBUTTON);require(app.view.draggedSpeed==-1);
+        require(closeTo(app.game.enemySpeed(EnemyKind::Wanderer),1.65f));
+        tap(app,VK_F6);require(app.view.speedPanel);
+    });
+    test("C16 focus capture modal screens and new games cancel slider drags",[]{
+        Application app;arena(app);
+        mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);require(app.view.draggedSpeed==0);
+        tap(app,'H');require(app.view.help&&app.view.draggedSpeed==-1);
+        mouse(WM_LBUTTONDOWN,1205,416,MK_LBUTTON);require(closeTo(app.game.enemySpeed(EnemyKind::Wanderer),2.4f));
+        tap(app,'H');mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
+        tap(app,'R');require(app.view.ranking&&app.view.draggedSpeed==-1);tap(app,'R');
+        mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
+        windowProcedure(nullptr,WM_CAPTURECHANGED,0,0);require(app.view.draggedSpeed==-1);
+        mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
+        windowProcedure(nullptr,WM_KILLFOCUS,0,0);require(app.view.draggedSpeed==-1&&app.game.phase==Phase::Paused);
+        mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);app.start();require(app.view.draggedSpeed==-1);
+    });
+    test("C17 paused tuning works while home and terminal screens ignore slider clicks",[]{
+        Application app;application=&app;
+        mouse(WM_LBUTTONDOWN,1205,416,MK_LBUTTON);require(!app.game.speedTuningUsed);
+        arena(app);tap(app,'P');require(app.game.phase==Phase::Paused);
+        mouse(WM_LBUTTONDOWN,1001,480,MK_LBUTTON);mouse(WM_LBUTTONUP,1001,480);
+        require(closeTo(app.game.enemySpeed(EnemyKind::Chaser),2.4f));tap(app,'P');
+        require(app.game.phase==Phase::Playing);
+        for(auto phase:{Phase::GameOver,Phase::StageClear,Phase::Victory}) {
+            app.game.phase=phase;mouse(WM_LBUTTONDOWN,1205,480,MK_LBUTTON);
+            require(closeTo(app.game.enemySpeed(EnemyKind::Chaser),2.4f)&&app.view.draggedSpeed==-1);
+        }
+    });
+    test("C18 tuned campaigns never write ranking records even after restoring defaults",[]{
+        Application app;arena(app);
+        auto directory=std::filesystem::current_path()/("speed-ranking-"+
+            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".tmp");
+        require(std::filesystem::create_directory(directory));app.directory=directory;
+        app.game.setEnemySpeed(EnemyKind::Chaser,2.4f);app.game.resetEnemySpeeds();
+        for(auto phase:{Phase::GameOver,Phase::Victory}) {
+            app.game.phase=phase;app.record();
+            require(!app.recorded&&!std::filesystem::exists(directory/"scores.tsv"));
+        }
+        app.start();require(!app.game.speedTuningUsed);std::filesystem::remove(directory);
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
     return failed?1:0;

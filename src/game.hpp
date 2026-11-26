@@ -20,6 +20,8 @@ enum class Item { None, Fire, Bomb, Speed };
 enum class Direction { None, Up, Down, Left, Right };
 enum class BombKind { Normal, Pierce, Remote };
 enum class EnemyKind { Wanderer, Chaser, Armored, Swift };
+constexpr std::array<float, 4> DefaultEnemySpeeds{{1.65f, 2.15f, 1.4f, 2.7f}};
+constexpr float MinEnemySpeed = 0.f, MaxEnemySpeed = 6.f, EnemySpeedStep = .05f;
 enum class Phase { Playing, Paused, StageClear, GameOver, Victory };
 enum class Event { Place, Explode, Pickup, Hurt, EnemyDown, Clear, Win };
 enum class Scene { Chain, Chase, Items, Exit, Specials, Life };
@@ -53,7 +55,7 @@ struct Enemy : Actor {
     int hp = 1;
     std::set<int> hitBlasts;
     std::vector<Cell> path;
-    float speed() const;
+    float speed() const; // Baseline speed; Game::enemySpeed supplies the live tuning value.
 };
 struct Bomb {
     int id = 0, owner = 0;
@@ -85,7 +87,7 @@ public:
     std::vector<Flame> flames;
     std::vector<Pickup> items;
     Cell exit{13, 11};
-    bool exitRevealed = false, practice = false;
+    bool exitRevealed = false, practice = false, speedTuningUsed = false;
     int stage = 1, lives = 3, score = 0, nextBombId = 1;
     unsigned mapSeed = 0;
     int mapVariant = 1;
@@ -102,6 +104,9 @@ public:
     void nextStage();
     void update(float dt, const Input& input = {});
     void togglePause();
+    float enemySpeed(EnemyKind kind) const;
+    bool setEnemySpeed(EnemyKind kind, float speed);
+    void resetEnemySpeeds();
     bool placeBomb(int playerId);
     void detonateRemote(int playerId);
     void cycleBomb(int playerId);
@@ -122,6 +127,7 @@ public:
     std::vector<Event> takeEvents();
 
 private:
+    std::array<float, 4> enemySpeeds = DefaultEnemySpeeds;
     std::mt19937 random;
     unsigned baseSeed;
     bool randomizeSeedOnNewGame = false;

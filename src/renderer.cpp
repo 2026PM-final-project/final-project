@@ -43,6 +43,11 @@ void Renderer::resize(int w,int h) {
     width=std::max(w,1);height=std::max(h,1);viewport=next;
     if(changed&&context)createFonts();
 }
+CanvasPoint Renderer::canvasPosition(int x,int y) const {
+    const int top=height-viewport.y-viewport.height;
+    return {(x-viewport.x)*float(CanvasWidth)/viewport.width,
+            (y-top)*float(CanvasHeight)/viewport.height};
+}
 void Renderer::shutdown() {
     if(context) {
         for(GLuint font : fonts) if(font) glDeleteLists(font,128);

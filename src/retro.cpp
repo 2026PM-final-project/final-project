@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "speed_controls.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -172,6 +173,31 @@ void Renderer::retroBoard(const Game& game,const View& view) {
 }
 
 // [03] Imported 1UP/HIGH SCORE/STAGE header, lives and F/B/S badges and single-player HUD.
+void Renderer::speedPanel(const Game& game,const View& view) {
+    using namespace speedControls;
+    rect(840,320,390,390,{.035f,.035f,.05f});border(840,320,390,390,{.18f,.18f,.23f});
+    text(862,351,"ENEMY SPEED LAB",1,.94f,.78f,.50f);
+    auto decimal=[](float value) {std::ostringstream out;out<<std::fixed<<std::setprecision(2)<<value;return out.str();};
+    text(862,376,"CELLS/SEC  |  PLAYER "+decimal(game.players[0].speed()),0,.70f,.74f,.80f);
+    const char* names[]={"WANDERER","TRACKER / CHASER","ARMORED","SWIFT"};
+    const Color colors[]={{.95f,.56f,.28f},{.80f,.48f,.94f},{.65f,.75f,.83f},{.20f,.85f,.85f}};
+    const bool enabled=view.canTuneSpeeds(game);
+    for(int row=0;row<4;++row) {
+        float y=trackY(row),value=game.enemySpeed(Kinds[row]);
+        Color color=enabled?colors[row]:Color{.40f,.40f,.45f};
+        text(862,y-16,names[row],0,color.r,color.g,color.b);
+        text(1132,y-16,decimal(value),1,color.r,color.g,color.b);
+        rect(Left,y-3,Right-Left,6,{.19f,.20f,.25f});
+        rect(Left,y-3,thumbX(value)-Left,6,color);
+        rect(thumbX(DefaultEnemySpeeds[row])-1,y-8,2,16,{.72f,.72f,.76f});
+        rect(thumbX(value)-6,y-9,12,18,view.draggedSpeed==row?Gold:color);
+        text(862,y+22,"DEFAULT "+decimal(DefaultEnemySpeeds[row]),0,.49f,.51f,.58f);
+    }
+    rect(ResetX,ResetY,ResetWidth,ResetHeight,enabled?Color{.12f,.16f,.21f}:Color{.07f,.07f,.09f});
+    border(ResetX,ResetY,ResetWidth,ResetHeight,{.45f,.48f,.56f});
+    text(876,680,"RESET ALL",0,.89f,.85f,.51f);
+    text(1025,680,"0-6 / STEP 0.05",0,.62f,.65f,.72f);
+}
 void Renderer::retroHud(const Game& game,const View& view) {
     rect(0,0,1280,900,{0,0,0});
     centered(144,32,"1UP",1,.31f,.86f,.45f);
@@ -193,13 +219,23 @@ void Renderer::retroHud(const Game& game,const View& view) {
         text(862,top+123,"SPEED "+speed.str()+"  LV "+std::to_string(player.speedLevel),0,.62f,.84f,.46f);
         top+=182.f;
     }
-    card(top,144);text(862,top+31,"ENEMIES / "+std::to_string(game.aliveEnemies()),1,.94f,.78f,.50f);
-    text(862,top+65,"ORANGE  straight until blocked",0,.95f,.56f,.28f);
-    text(862,top+94,"PURPLE  BFS chase within 8",0,.80f,.48f,.94f);
-    text(862,top+123,"STEEL 2 HP / CYAN fast",0,.65f,.75f,.83f);top+=163;
-    card(top,137);text(862,top+31,game.practice?"PRACTICE / UNRANKED":"CAMPAIGN",1,.82f,.82f,.42f);
-    text(862,top+67,std::string("EXIT / ")+(game.exitOpen()?"OPEN":game.exitRevealed?"LOCKED":"HIDDEN"),0,.89f,.79f,.45f);
-    text(862,top+99,"Defeat > reveal > enter",0,.74f,.74f,.80f);
+    if(view.speedPanel) {
+        speedPanel(game,view);
+        card(728,62);
+        text(862,752,"ENEMIES "+std::to_string(game.aliveEnemies())+"  EXIT / "+
+             (game.exitOpen()?"OPEN":game.exitRevealed?"LOCKED":"HIDDEN"),0,.89f,.79f,.45f);
+        text(862,776,game.practice?"PRACTICE / UNRANKED":game.speedTuningUsed?
+             "SPEED TUNING / UNRANKED":"CAMPAIGN / DEFAULT SPEEDS",0,.74f,.74f,.80f);
+    } else {
+        card(top,144);text(862,top+31,"ENEMIES / "+std::to_string(game.aliveEnemies()),1,.94f,.78f,.50f);
+        text(862,top+65,"ORANGE  straight until blocked",0,.95f,.56f,.28f);
+        text(862,top+94,"PURPLE  BFS chase within 8",0,.80f,.48f,.94f);
+        text(862,top+123,"STEEL 2 HP / CYAN fast",0,.65f,.75f,.83f);top+=163;
+        card(top,137);text(862,top+31,game.practice?"PRACTICE / UNRANKED":game.speedTuningUsed?
+            "SPEED TEST / UNRANKED":"CAMPAIGN",1,.82f,.82f,.42f);
+        text(862,top+67,std::string("EXIT / ")+(game.exitOpen()?"OPEN":game.exitRevealed?"LOCKED":"HIDDEN"),0,.89f,.79f,.45f);
+        text(862,top+99,"Defeat > reveal > enter",0,.74f,.74f,.80f);
+    }
     for(int i=0;i<game.lives;++i) {
         float x=73.f+i*36;texture(retroTextures[3],x,798,30,30,{1,1,1});
         rect(x+7,808,4,5,White);rect(x+19,808,4,5,White);
@@ -216,7 +252,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     text(842,802,view.paths?"F2 PATH ON":"F2 PATH",0,.88f,.86f,.36f);
     text(1030,802,view.muted?"N SOUND OFF":"N SOUND ON",0,.88f,.86f,.36f);
     text(842,831,"H HELP / R RANKING / P PAUSE",0,.8f,.8f,.84f);
-    text(842,859,"F3 LAB / F4 NEW",0,.66f,.66f,.74f);
+    text(842,859,"F3 LAB / F4 NEW / F6 SPEED",0,.66f,.66f,.74f);
     std::string note=view.menu?"SPACE / START   ARROWS / MOVE   SPACE / BOMB":game.notice;
     if(note.size()>77)note.resize(77);
     text(66,890,note,0,.78f,.78f,.53f);
@@ -289,13 +325,14 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
             "H/F1: help  R/Tab: ranking  N/M: sound",
             "P: pause  Esc: home  F4: new campaign",
             "F2: BFS area and distances 0-8 / yellow shortest route",
-            "F3: feature labs / F5: save screenshot",
+            "F3: feature labs / F5: capture / F6: speed sliders",
+            "Mouse: drag speed sliders. RESET ALL restores defaults.",
             "FIRE: +1 range per pickup. Crates reveal the upgrade.",
             "BOMB: capacity +1. SPEED: continuous movement speed +.",
             "Orange goes straight until blocked. Purple uses BFS.",
             "Broken crate cells burn too. Wait before taking drops.",
             "Defeat enemies, reveal the exit, then enter it."};
-        for(int i=0;i<13;++i)text(96,274.f+i*33,rows[i],0,.87f,.87f,.83f);
+        for(int i=0;i<14;++i)text(96,274.f+i*33,rows[i],0,.87f,.87f,.83f);
         centered(430,745,"H / F1 / ESC  BACK",0,.88f,.87f,.38f);return;
     }
     if(view.menu) {

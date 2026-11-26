@@ -5,6 +5,7 @@
 #include "movement.hpp"
 #include "renderer.hpp"
 #include "scores.hpp"
+#include "speed_controls.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -25,16 +26,36 @@ struct Application {
     std::filesystem::path directory;
 
     void start() {
+        cancelSpeedDrag();
         game.newGame();recorded=false;view.menu=false;view.scene=-1;
         view.help=false;view.ranking=false;view.readyTime=1.2f;buffered.fill(Direction::None);
     }
     bool tap(int key) {return key>=0&&key<256&&pressed[key];}
     bool keyHeld(int key) const {return key>=0&&key<256&&held[key];}
+    void cancelSpeedDrag() {
+        if(view.draggedSpeed<0)return;
+        view.draggedSpeed=-1;
+        if(GetCapture())ReleaseCapture();
+    }
+    void dragSpeed(CanvasPoint point) {
+        if(!view.canTuneSpeeds(game)||view.draggedSpeed<0||view.draggedSpeed>=4) {cancelSpeedDrag();return;}
+        game.setEnemySpeed(speedControls::Kinds[view.draggedSpeed],speedControls::speedAt(point.x));
+    }
+    void beginSpeedDrag(HWND window,CanvasPoint point) {
+        if(!view.canTuneSpeeds(game))return;
+        int row=speedControls::hitSlider(point);
+        if(row>=0) {
+            view.draggedSpeed=row;dragSpeed(point);
+            if(window)SetCapture(window);
+        } else if(speedControls::hitReset(point)) {cancelSpeedDrag();game.resetEnemySpeeds();}
+    }
     void commands() {
         if(tap(VK_F1)||tap('H')) {view.help=!view.help;view.ranking=false;}
         if(tap(VK_F2))view.paths=!view.paths;
         if(tap('N')||tap('M')) {view.muted=!view.muted;audio.mute(view.muted);}
         if(tap(VK_TAB)||tap('R')) {view.ranking=!view.ranking;view.help=false;}
+        if(tap(VK_F6))view.speedPanel=!view.speedPanel;
+        if(!view.canTuneSpeeds(game))cancelSpeedDrag();
         if(tap(VK_ESCAPE)) {
             if(view.help)view.help=false;
             else if(view.ranking)view.ranking=false;
@@ -61,6 +82,7 @@ struct Application {
             if(tap('Q'))game.cycleBomb(0);
         }
         if(tap(VK_F3)) {
+            cancelSpeedDrag();
             view.scene=(view.scene+1)%6;game.loadScene(Scene(view.scene));
             view.menu=false;view.paths=true;view.readyTime=0;recorded=false;
             buffered.fill(Direction::None);
@@ -89,7 +111,7 @@ struct Application {
     }
     bool frozen() const {return captureMode||view.menu||view.help||view.ranking||view.readyTime>0;}
     void record() {
-        if(recorded||game.practice||(game.phase!=Phase::Victory&&game.phase!=Phase::GameOver))return;
+        if(recorded||game.practice||game.speedTuningUsed||(game.phase!=Phase::Victory&&game.phase!=Phase::GameOver))return;
         recorded=true;
         if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,1,localDate()}))
             game.notice="Ranking could not be saved. Check folder write permission.";
@@ -106,11 +128,29 @@ static LRESULT CALLBACK windowProcedure(HWND window,UINT message,WPARAM w,LPARAM
     case WM_DESTROY:PostQuitMessage(0);return 0;
     case WM_ERASEBKGND:return 1;
     case WM_SIZE:if(app)app->renderer.resize(LOWORD(l),HIWORD(l));return 0;
+    case WM_LBUTTONDOWN:
+        if(app)app->beginSpeedDrag(window,app->renderer.canvasPosition(short(LOWORD(l)),short(HIWORD(l))));
+        return 0;
+    case WM_MOUSEMOVE:
+        if(app&&app->view.draggedSpeed>=0) {
+            if(w&MK_LBUTTON)app->dragSpeed(app->renderer.canvasPosition(short(LOWORD(l)),short(HIWORD(l))));
+            else app->cancelSpeedDrag();
+        }
+        return 0;
+    case WM_LBUTTONUP:
+        if(app&&app->view.draggedSpeed>=0) {
+            app->dragSpeed(app->renderer.canvasPosition(short(LOWORD(l)),short(HIWORD(l))));
+            app->cancelSpeedDrag();
+        }
+        return 0;
+    case WM_CAPTURECHANGED:if(app)app->view.draggedSpeed=-1;return 0;
+    case WM_CANCELMODE:if(app)app->cancelSpeedDrag();return 0;
     case WM_GETMINMAXINFO: {
         auto* info=reinterpret_cast<MINMAXINFO*>(l);info->ptMinTrackSize={1000,740};return 0;
     }
     case WM_KILLFOCUS:
         if(app) {
+            app->cancelSpeedDrag();
             app->held.fill(false);app->pressed.fill(false);app->buffered.fill(Direction::None);
             if(!app->captureMode&&!app->view.menu&&app->game.phase==Phase::Playing)app->game.togglePause();
         }

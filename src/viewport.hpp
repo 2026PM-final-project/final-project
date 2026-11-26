@@ -11,6 +11,7 @@ constexpr int CanvasHeight = 900;
 struct Viewport {
     int x, y, width, height;
 };
+struct CanvasPoint { float x, y; };
 
 inline Viewport fitViewport(int width, int height) {
     width = std::max(width, 1);
