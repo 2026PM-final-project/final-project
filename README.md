@@ -119,7 +119,7 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | Advanced: Items | Fire=획득할 때마다 범위 +1, Bomb=용량 +1, Speed=레벨 +1·이동속도 +0.45칸/초. 기본 속도 3칸/초 |
 | Sound | 합성 배경 음악, 설치·폭발·획득·피격·적 사망·클리어 효과음. M으로 켜기/끄기 |
 | Stages / level | 3개 스테이지. 지형 색상·벽 배치·적 구성 변화. 다음 스테이지에 능력·점수·남은 목숨 유지 |
-| Score board / ranking | 정상 캠페인의 게임오버 또는 최종 승리 시 1회 기록. 점수 내림차순 상위 10개, 날짜·도달 스테이지 표시. 재실행 후 유지 |
+| Score board / ranking | 일반 캠페인의 STAGE 3 최종 클리어만 1회 기록. 점수 내림차순 상위 10개와 완료 날짜·시각(24시간제, 초 단위) 표시. 재실행 후 유지 |
 | Special bombs | 관통 폭탄: 부서지는 벽 관통, 단단한 벽은 차단. 원격 폭탄: 자동 타이머 없이 수동 기폭, 화염에는 즉시 연쇄폭발 |
 | Multiple players | 이번 요청에 따라 삭제. 1인 전용 |
 | Special enemies | 강철색 Armored: 서로 다른 폭발 2회 필요. 청록색 Swift: 기본 적보다 빠르게 이동 |
@@ -137,9 +137,11 @@ ctest --test-dir build-vs -C Release --output-on-failure
 
 지형은 15×13입니다. 가장자리와 내부 짝수 좌표 교차점에 단단한 벽이 놓입니다. 부서지는 벽 배치는 스테이지별 고정 시드이므로 재시작 시 재현 가능합니다. 출발점과 인접 탈출 칸은 비워 두고, 각 스테이지에는 세 종류의 강화가 반드시 들어 있습니다. 출구는 `(13,9)`의 부서지는 벽 아래에 있습니다. 좌표는 좌상단부터 0 기준입니다.
 
-점수는 벽 파괴 +10, 아이템 +50, 일반·추격·고속 적 +200, 장갑 적 +400입니다. 클리어 보너스는 `1000 + max(0, 600 - floor(스테이지 경과 초) × 2)`입니다. 1인 플레이의 점수와 도달 스테이지를 기록합니다. 기존 점수 파일의 형식은 호환됩니다.
+점수는 벽 파괴 +10, 아이템 +50, 일반·추격·고속 적 +200, 장갑 적 +400입니다. 클리어 보너스는 `1000 + max(0, 600 - floor(스테이지 경과 초) × 2)`입니다. 1인 일반 캠페인의 STAGE 3을 모두 클리어했을 때만 최종 점수와 완료 시각(`YYYY-MM-DD HH:mm:ss`)을 기록합니다. 게임오버와 날짜만 있는 기존 기록은 랭킹에서 제외합니다.
 
 실행 파일 옆 `scores.tsv`에 저장합니다(예: `build/scores.tsv`). 형식이 잘못된 줄은 무시하고, 임시 파일에 기록을 완료한 뒤 기존 파일을 교체합니다. 기능별 연습 장면은 **PRACTICE / UNRANKED**로 표시하며 랭킹에 기록하지 않습니다.
+
+점수 계산 예시, 시간 보너스, 동점 처리와 저장 형식은 [랭킹 기능 및 점수 계산 방식](docs/RANKING_AND_SCORING.md)에 정리했습니다.
 
 ## 5. 알고리즘·자료구조 설명
 
@@ -274,28 +276,29 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/retro.cpp](src/retro.cpp#L104) / [02] | L104~173 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
 | [src/retro.cpp](src/retro.cpp#L174) / [03] | L174~224 | 1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분 HUD |
 | [src/retro.cpp](src/retro.cpp#L225) / [04] | L225~270 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
-| [src/retro.cpp](src/retro.cpp#L271) / [05] | L271~323 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
+| [src/retro.cpp](src/retro.cpp#L271) / [05] | L271~324 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
 | [src/audio.hpp](src/audio.hpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/audio.hpp](src/audio.hpp#L8) / [01] | L8~23 | 별도 스레드·원자 플래그·mutex 이벤트 큐를 가진 오디오 인터페이스 |
 | [src/audio.cpp](src/audio.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/audio.cpp](src/audio.cpp#L16) / [01] | L16~26 | 스레드 시작·종료, 음소거, 게임 이벤트를 사운드 큐로 전달 |
 | [src/audio.cpp](src/audio.cpp#L27) / [02] | L27~82 | waveOut 3중 버퍼, 배경 선율, 이벤트별 주파수·노이즈·감쇠 포락선 믹싱 |
 | [src/scores.hpp](src/scores.hpp) / 공통 선언 | L1~5 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/scores.hpp](src/scores.hpp#L6) / [01] | L6~11 | 기록 데이터와 읽기·저장·날짜 함수 선언 |
+| [src/scores.hpp](src/scores.hpp#L6) / [01] | L6~11 | 최종 클리어 기록 데이터와 읽기·저장·완료 시각 함수 선언 |
 | [src/scores.cpp](src/scores.cpp) / 공통 선언 | L1~17 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/scores.cpp](src/scores.cpp#L18) / [01] | L18~43 | 손상된 기록 검증, 상위 10개 정렬·읽기 |
-| [src/scores.cpp](src/scores.cpp#L44) / [02] | L44~70 | 임시 파일 완성 후 교체, 기존 파일 보존, 로컬 날짜 생성 |
+| [src/scores.cpp](src/scores.cpp#L18) / [01] | L18~52 | STAGE 3 완료·24시간제 시각 검증, 구형 기록 제외, 상위 10개 정렬·읽기 |
+| [src/scores.cpp](src/scores.cpp#L53) / [02] | L53~79 | 임시 파일 완성 후 교체, 기존 파일 보존, 로컬 완료 시각 생성(초 단위) |
 | [tests/test_game.cpp](tests/test_game.cpp) / 공통 선언 | L1~13 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [tests/test_game.cpp](tests/test_game.cpp#L14) / [01] | L14~49 | 테스트 하네스·실패 집계·독립 빈 맵·시간 진행 도우미 |
 | [tests/test_game.cpp](tests/test_game.cpp#L50) / [02] | L50~139 | T01~17: 시작·이동·설치·폭발·연쇄반응 |
 | [tests/test_game.cpp](tests/test_game.cpp#L140) / [03] | L140~222 | T18~36: 적 이동·8칸 BFS 경계·피격·목숨·숨은 출구·승리 |
-| [tests/test_game.cpp](tests/test_game.cpp#L223) / [04] | L223~373 | T37~58: 아이템·단계·특수 폭탄·1인 고정·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
-| [tests/test_game.cpp](tests/test_game.cpp#L374) / [05] | L374~431 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·연속 탭 입력 회귀 |
-| [tests/test_game.cpp](tests/test_game.cpp#L432) / [06] | L432~507 | T63~73: 직진 적·BFS, Fire 획득별 범위 증가, 탐색 영역·팝업 시간, 부서진 칸 화염·연쇄폭발 아이템 보호·화염 접촉 |
-| [tests/test_game.cpp](tests/test_game.cpp#L508) / [07] | L508~533 | T74~76: 여러 폭탄 연속 통과, 이동 중 나타난 폭탄 통과, 재진입 후 폭발 피해 |
-| [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L8) / [01] | L8~37 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L38) / [02] | L38~169 | C01~C12: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지 |
+| [tests/test_game.cpp](tests/test_game.cpp#L223) / [04] | L223~374 | T37~58: 아이템·단계·특수 폭탄·1인 고정·장갑/고속 적·정지·랭킹·회귀·장시간 검증 |
+| [tests/test_game.cpp](tests/test_game.cpp#L375) / [05] | L375~432 | T59~62: 여러 물리 틱의 짧은 입력 중복 방지, 연속 이동·방향 전환·연속 탭 입력 회귀 |
+| [tests/test_game.cpp](tests/test_game.cpp#L433) / [06] | L433~508 | T63~73: 직진 적·BFS, Fire 획득별 범위 증가, 탐색 영역·팝업 시간, 부서진 칸 화염·연쇄폭발 아이템 보호·화염 접촉 |
+| [tests/test_game.cpp](tests/test_game.cpp#L509) / [07] | L509~531 | T74~76: 여러 폭탄 연속 통과, 이동 중 나타난 폭탄 통과, 재진입 후 폭발 피해 |
+| [tests/test_game.cpp](tests/test_game.cpp#L532) / [08] | L532~571 | T77~79: 구형·미완료 기록 제외, 24시간제 완료 시각 저장·검증, 동점 순서 유지 |
+| [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~8 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L9) / [01] | L9~38 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L39) / [02] | L39~210 | C01~C14: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지·최종 클리어 전용 랭킹 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~33 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~4 | 소스에 맞는 실행 파일을 찾는 run.ps1 호출 |
@@ -364,7 +367,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Audio::stop` | [src/audio.cpp:L25](src/audio.cpp#L25) |
 | `Audio::loop` | [src/audio.cpp:L28](src/audio.cpp#L28) |
 
-`Application::start/commands`와 `Application::input/frozen/record`는 `main.cpp`의 [01]/[02]에 인라인 정의돼 있습니다. `localDate/readScores/saveScore`는 `scores.cpp`의 [01]/[02]에 있습니다.
+`Application::start/commands`와 `Application::input/frozen/record`는 `main.cpp`의 [01]/[02]에 인라인 정의돼 있습니다. `localTimestamp/readScores/saveScore`는 `scores.cpp`의 [01]/[02]에 있습니다.
 <!-- CODE_MAP_END -->
 
 ## 7. 검증과 발표
@@ -395,8 +398,8 @@ final_project/
     audio.hpp / .cpp         PCM 배경 음악·효과음
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체
     main.cpp                 창·입력·고정 틱·전체 수명 관리
-  tests/test_game.cpp         79개 게임 규칙·회귀 테스트
-  tests/test_controls.cpp     12개 Win32 입력·화면 전환 테스트
+  tests/test_game.cpp         82개 게임 규칙·회귀 테스트
+  tests/test_controls.cpp     14개 Win32 입력·화면 전환 테스트
   scripts/update_code_map.py  README 줄 번호 자동 갱신
   scripts/package.py          배포 ZIP·SHA256 생성 및 무결성 검사
   docs/DEMO_GUIDE.md          발표용 시연 순서

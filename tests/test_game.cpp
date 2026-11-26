@@ -347,9 +347,10 @@ int main() {
         auto path=std::filesystem::current_path()/"ranking-test.tmp";
         {std::ofstream out(path);out<<"broken record\n-1 1 1 2026-10-28\n";}
         require(readScores(path).empty());
-        for(int i=0;i<12;++i)require(saveScore(path,{i*100,1+i%3,1+i%2,"2026-10-28"}));
+        for(int i=0;i<12;++i)require(saveScore(path,{i*100,3,1,"2026-11-26 23:59:59"}));
         auto rows=readScores(path);require(rows.size()==10&&rows.front().score==1100&&rows.back().score==200);
-        require(!saveScore(path,{-3,1,1,"2026-10-28"}));std::filesystem::remove(path);
+        require(rows.front().clearedAt=="2026-11-26 23:59:59");
+        require(!saveScore(path,{-3,3,1,"2026-11-26 23:59:59"}));std::filesystem::remove(path);
     });
     test("56 live item cannot be collected from a burning cell",[]{
         auto g=empty();g.items.push_back({{1,1},Item::Fire});g.flames.push_back({{1,1},.5f,0,1});
@@ -527,6 +528,43 @@ int main() {
         input.move[0]=Direction::Left;advance(g,1.f/3,input);
         require(near(g.players[0].x,1.5f)&&g.bombs.size()==1&&g.lives==3);
         advance(g,2.f);require(g.lives==2&&g.bombs.empty());
+    });
+    // [08] Only timestamped final-stage clears belong in the ranking.
+    test("77 legacy records and incomplete stages are excluded without rewriting the file",[]{
+        auto path=std::filesystem::current_path()/"ranking-eligibility-test.tmp";
+        const std::string contents="9000\t3\t1\t2026-11-25\n"
+            "8000\t2\t1\t2026-11-26 23:59:59\n7000\t1\t1\t2026-11-26 23:59:59\n"
+            "6000\t3\t1\t2026-11-26 23:59:58\n5000\t3\t1\t2026-11-26 25:00:00\n";
+        {std::ofstream out(path);out<<contents;}
+        auto rows=readScores(path);
+        require(rows.size()==1&&rows[0].score==6000&&rows[0].stage==3);
+        require(rows[0].clearedAt=="2026-11-26 23:59:58");
+        std::ifstream in(path);std::string actual,line;
+        while(std::getline(in,line))actual+=line+'\n';
+        require(actual==contents);in.close();std::filesystem::remove(path);
+    });
+    test("78 ranking timestamps require 24-hour times including seconds",[]{
+        auto path=std::filesystem::current_path()/"ranking-timestamp-test.tmp";
+        for(const char* time:{"2026-11-26","2026-11-26 24:00:00","2026-11-26 12:60:00",
+                             "2026-11-26 12:00:60","2026-11-26 1:02:03","2026-11-26 01:02:03 PM"})
+            require(!saveScore(path,{100,3,1,time}));
+        require(!saveScore(path,{100,1,1,"2026-11-26 00:00:00"}));
+        require(!saveScore(path,{100,2,1,"2026-11-26 00:00:00"}));
+        require(!std::filesystem::exists(path));
+        require(saveScore(path,{100,3,1,"2026-11-26 00:00:00"}));
+        require(saveScore(path,{200,3,1,"2026-11-26 23:59:59"}));
+        auto rows=readScores(path);require(rows.size()==2);
+        require(rows[0].clearedAt=="2026-11-26 23:59:59"&&rows[1].clearedAt=="2026-11-26 00:00:00");
+        std::filesystem::remove(path);
+    });
+    test("79 tied clear scores preserve order and exact timestamps",[]{
+        auto path=std::filesystem::current_path()/"ranking-tie-test.tmp";
+        require(saveScore(path,{4000,3,1,"2026-11-26 23:59:59"}));
+        require(saveScore(path,{4000,3,1,"2026-11-26 00:00:00"}));
+        require(saveScore(path,{4500,3,1,"2026-11-26 12:34:56"}));
+        auto rows=readScores(path);require(rows.size()==3&&rows[0].score==4500);
+        require(rows[1].clearedAt=="2026-11-26 23:59:59"&&rows[2].clearedAt=="2026-11-26 00:00:00");
+        std::filesystem::remove(path);
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;

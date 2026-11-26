@@ -89,9 +89,9 @@ struct Application {
     }
     bool frozen() const {return captureMode||view.menu||view.help||view.ranking||view.readyTime>0;}
     void record() {
-        if(recorded||game.practice||(game.phase!=Phase::Victory&&game.phase!=Phase::GameOver))return;
+        if(recorded||game.practice||game.stage!=3||game.phase!=Phase::Victory)return;
         recorded=true;
-        if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,1,localDate()}))
+        if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,1,localTimestamp()}))
             game.notice="Ranking could not be saved. Check folder write permission.";
         view.ranks=readScores(directory/L"scores.tsv");
     }
