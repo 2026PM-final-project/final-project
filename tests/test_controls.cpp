@@ -81,15 +81,18 @@ int main() {
         tap(app,VK_RETURN);tap(app,VK_CONTROL,LPARAM(1)<<24);tap(app,VK_SHIFT);
         require(app.game.bombs.empty()&&player.selected==BombKind::Normal&&app.game.players.size()==1);
     });
-    test("C05 H R N and legacy aliases preserve modal input semantics",[]{
+    test("C05 R opens ranking Enter closes it and N M toggle sound",[]{
         Application app;arena(app);app.game.score=321;
         tap(app,'H');require(app.view.help&&app.frozen());
         tap(app,'R');require(app.view.ranking&&!app.view.help);
-        tap(app,'H');require(app.view.help&&!app.view.ranking);
+        tap(app,'H');require(app.view.ranking&&!app.view.help);
+        tap(app,VK_TAB);require(app.view.ranking);
+        tap(app,VK_ESCAPE);require(app.view.ranking&&!app.view.menu);
+        tap(app,'R');require(app.view.ranking);
+        tap(app,VK_RETURN);require(!app.view.ranking&&app.game.score==321);
+        tap(app,'H');require(app.view.help);
         down('H',LPARAM(1)<<30);frame(app);up('H');require(app.view.help,"OS key repeat toggled help");
         tap(app,VK_ESCAPE);require(!app.view.help&&!app.view.menu);
-        tap(app,'R');require(app.view.ranking&&app.game.score==321);
-        tap(app,VK_TAB);require(!app.view.ranking);
         tap(app,'N');require(app.view.muted);tap(app,'M');require(!app.view.muted);
         tap(app,VK_ESCAPE);require(app.view.menu&&app.game.stage==1&&app.game.score==0);
     });
@@ -208,7 +211,7 @@ int main() {
         tap(app,'H');require(app.view.help&&app.view.draggedSpeed==-1);
         mouse(WM_LBUTTONDOWN,1205,416,MK_LBUTTON);require(closeTo(app.game.enemySpeed(EnemyKind::Wanderer),2.4f));
         tap(app,'H');mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
-        tap(app,'R');require(app.view.ranking&&app.view.draggedSpeed==-1);tap(app,'R');
+        tap(app,'R');require(app.view.ranking&&app.view.draggedSpeed==-1);tap(app,VK_RETURN);
         mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
         windowProcedure(nullptr,WM_CAPTURECHANGED,0,0);require(app.view.draggedSpeed==-1);
         mouse(WM_LBUTTONDOWN,1001,416,MK_LBUTTON);
@@ -297,6 +300,36 @@ int main() {
         require(restarted.view.ranks.size()==2&&restarted.view.ranks[0].score==9466);
         std::filesystem::remove(app.rankingFile);std::filesystem::remove(directory/"data");
         std::filesystem::remove(directory);
+    });
+    test("C22 home ranking opens only with R and Enter exits without starting the game",[]{
+        Application app;application=&app;
+        tap(app,VK_TAB);require(app.view.menu&&!app.view.ranking);
+        tap(app,'R');require(app.view.menu&&app.view.ranking&&app.frozen());
+        for(int key:{VK_TAB,VK_ESCAPE,int('R'),int('H'),VK_SPACE,VK_RIGHT,VK_F4}) {
+            tap(app,key);require(app.view.menu&&app.view.ranking&&app.game.bombs.empty());
+        }
+        tap(app,'N');require(app.view.muted&&app.view.ranking);
+        tap(app,'M');require(!app.view.muted&&app.view.ranking);
+        tap(app,VK_RETURN);require(app.view.menu&&!app.view.ranking&&app.game.stage==1);
+        require(closeTo(app.game.elapsed,0)&&app.game.bombs.empty());
+    });
+    test("C23 ranking Enter is consumed before stage ready advance retry or bomb actions",[]{
+        const Phase phases[]={Phase::Playing,Phase::StageClear,Phase::Victory,Phase::Paused,Phase::GameOver};
+        for(auto phase:phases) {
+            Application app;arena(app);app.game.stage=2;app.game.phase=phase;app.game.score=321;
+            if(phase==Phase::Playing)app.view.readyTime=1.2f;
+            const float ready=app.view.readyTime;
+            tap(app,'R');require(app.view.ranking);
+            tap(app,VK_RETURN);require(!app.view.ranking&&!app.view.menu);
+            require(app.game.phase==phase&&app.game.stage==2&&app.game.score==321);
+            require(closeTo(app.view.readyTime,ready)&&app.game.bombs.empty());
+            down(VK_RETURN,LPARAM(1)<<30);frame(app);up(VK_RETURN);
+            require(app.game.phase==phase&&app.game.stage==2);
+        }
+        Application app;arena(app);tap(app,'R');
+        down(VK_SPACE);down(VK_RETURN);frame(app);up(VK_SPACE);up(VK_RETURN);frame(app);
+        require(!app.view.ranking&&app.game.bombs.empty());
+        tap(app,VK_SPACE);require(app.game.bombs.size()==1);
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
     return failed?1:0;

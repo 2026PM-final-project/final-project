@@ -62,7 +62,8 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | Space / Enter | STAGE 준비 화면 즉시 시작, 스테이지 완료 후 다음 단계 |
 | Space | 게임오버·최종 승리 후 새 게임 |
 | H / F1 | 도움말. 게임 시간 정지 |
-| R / Tab | 저장된 랭킹. 게임 시간 정지 |
+| R | 랭킹 열기. 게임 시간 정지 |
+| Enter | 랭킹 화면 닫기. 같은 입력으로 스테이지를 진행하지 않음 |
 | N / M | 배경 음악·효과음 음소거 / 복구 |
 | P | 일시정지 / 재개 |
 | F2 | 추격 적의 8칸 BFS 탐색 영역·거리 0~8·노란 최단 경로 |
@@ -70,7 +71,7 @@ ctest --test-dir build-vs -C Release --output-on-failure
 | F4 | 처음부터 새 캠페인. 능력·목숨·점수 초기화 |
 | F6 | 적 속도 슬라이더 패널 표시 / 숨기기 |
 | F5 | 실제 화면을 실행 파일 옆 `capture.bmp`로 저장 |
-| Esc | 도움말·랭킹 닫기. 게임에서는 홈으로 이동 |
+| Esc | 도움말 닫기. 게임에서는 홈으로 이동. 랭킹은 Enter로 닫기 |
 | Alt+F4 / 창 닫기 | 프로그램 종료 |
 
 다른 창으로 포커스가 이동하면 입력을 비우고 진행 중인 게임을 일시정지합니다. 1인 전용이며 WASD와 2인용 시작·이동·폭탄 조작은 제거했습니다. 목숨은 3개로 시작합니다. 기존 연속 이동과 짧은 입력의 한 칸 이동은 유지합니다.
@@ -260,10 +261,10 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/game.cpp](src/game.cpp#L525) / [09] | L525~559 | 고정 틱 갱신 순서, 아이템 등장 애니메이션·타이머·도화선·정지, 이벤트 수거 |
 | [src/game.cpp](src/game.cpp#L560) / [10] | L560~579 | F2 표시용 전체 8칸 BFS 거리 지도 |
 | [src/main.cpp](src/main.cpp) / 공통 선언 | L1~16 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
-| [src/main.cpp](src/main.cpp#L17) / [01] | L17~92 | 앱 소유권, 마우스 속도 슬라이더·F6 패널 전환, 홈·STAGE 준비·기존 명령 |
-| [src/main.cpp](src/main.cpp#L93) / [02] | L93~123 | 방향키 전용 1인 입력, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
-| [src/main.cpp](src/main.cpp#L124) / [03] | L124~181 | Win32 창 메시지, 키 반복 방지, 비율 유지 마우스 좌표·드래그 캡처·포커스 상실 처리 |
-| [src/main.cpp](src/main.cpp#L182) / [04] | L182~258 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
+| [src/main.cpp](src/main.cpp#L17) / [01] | L17~99 | 앱 소유권, 마우스 속도 슬라이더·F6 패널 전환, 홈·STAGE 준비·기존 명령 |
+| [src/main.cpp](src/main.cpp#L100) / [02] | L100~130 | 방향키 전용 1인 입력, 수정된 방향 버퍼 재사용, 기록 저장 조건 |
+| [src/main.cpp](src/main.cpp#L131) / [03] | L131~188 | Win32 창 메시지, 키 반복 방지, 비율 유지 마우스 좌표·드래그 캡처·포커스 상실 처리 |
+| [src/main.cpp](src/main.cpp#L189) / [04] | L189~265 | 창 생성·OpenGL/오디오 초기화, 120Hz accumulator, 60FPS 제한, 자원 해제 |
 | [src/movement.hpp](src/movement.hpp) / 공통 선언 | L1~4 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/movement.hpp](src/movement.hpp#L5) / [01] | L5~17 | 렌더 프레임의 새 키 입력을 첫 물리 틱에서만 소비, 유지 입력·칸 중심 방향 버퍼 처리 |
 | [src/renderer.hpp](src/renderer.hpp) | L1~57 | 렌더러 API, 화면 상태·핸들·텍스처·폰트 선언 |
@@ -280,8 +281,8 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [src/retro.cpp](src/retro.cpp#L41) / [01] | L41~104 | 1122(4) 색상·입체 면·방향광·반사광을 64x64 RGBA 텍스처로 캐시, 글자 중앙 정렬 |
 | [src/retro.cpp](src/retro.cpp#L105) / [02] | L105~174 | 연속 실수 좌표를 따르는 구형 캐릭터, 아이템 팝업, 화염, 출구, F2 8칸 탐색 영역·최단 경로 |
 | [src/retro.cpp](src/retro.cpp#L175) / [03] | L175~260 | 1UP·HIGH SCORE·STAGE 헤더, 목숨·F/B/S 배지, 플레이어별 강화·적 구분·실시간 속도 슬라이더 HUD |
-| [src/retro.cpp](src/retro.cpp#L261) / [04] | L261~306 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
-| [src/retro.cpp](src/retro.cpp#L307) / [05] | L307~363 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
+| [src/retro.cpp](src/retro.cpp#L261) / [04] | L261~307 | 타이틀 로고·미리보기 맵·시작 안내의 홈 화면 |
+| [src/retro.cpp](src/retro.cpp#L308) / [05] | L308~364 | STAGE # 준비 화면, 도움말·랭킹·클리어·재시작 오버레이 |
 | [src/audio.hpp](src/audio.hpp) / 공통 선언 | L1~7 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [src/audio.hpp](src/audio.hpp#L8) / [01] | L8~23 | 별도 스레드·원자 플래그·mutex 이벤트 큐를 가진 오디오 인터페이스 |
 | [src/audio.cpp](src/audio.cpp) / 공통 선언 | L1~15 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
@@ -304,7 +305,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | [tests/test_game.cpp](tests/test_game.cpp#L587) / [09] | L587~658 | T83~87: 구형 기록 제외, 날짜·시각 검증, 확인된 날짜 전용 기록의 재시작 보존·공통 저장 경로 |
 | [tests/test_controls.cpp](tests/test_controls.cpp) / 공통 선언 | L1~8 | 헤더 포함, 컴파일 옵션 매크로, namespace 및 공통 선언 |
 | [tests/test_controls.cpp](tests/test_controls.cpp#L9) / [01] | L9~41 | 실제 main.cpp 키 메시지 핸들러를 데스크톱 입력 주입 없이 호출하는 테스트 하네스 |
-| [tests/test_controls.cpp](tests/test_controls.cpp#L42) / [02] | L42~303 | C01~C21: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지·속도 슬라이더 입력·테스트 판 랭킹 제외·최종 클리어 timestamp 저장·공통 경로의 복원 기록 유지 |
+| [tests/test_controls.cpp](tests/test_controls.cpp#L42) / [02] | L42~336 | C01~C23: 홈·STAGE 시작, 방향키 4개·연속 이동·WASD/2인 입력 제거, H/R/N·별칭·다음 단계·재시작·원격 폭탄·폭탄 칸 재진입·V 키 무동작·창 비율 유지·속도 슬라이더 입력·테스트 판 랭킹 제외·최종 클리어 timestamp 저장·공통 경로의 복원 기록 유지·R 열기/Enter 종료·모달 입력 소비 |
 | [CMakeLists.txt](CMakeLists.txt) | L1~33 | 코어·게임·테스트 빌드 대상, 시스템 라이브러리, CTest 등록 |
 | [build.ps1](build.ps1) | L1~20 | GCC 탐색 → 규칙 테스트 빌드·실행 → GUI 정적 링크 |
 | [Run Demo.cmd](Run Demo.cmd) | L1~4 | 소스에 맞는 실행 파일을 찾는 run.ps1 호출 |
@@ -371,7 +372,7 @@ BFS 자체의 방문 노드·간선 수와 공간 복잡도는 **O(W×H)**입니
 | `Renderer::speedPanel` | [src/retro.cpp:L176](src/retro.cpp#L176) |
 | `Renderer::retroHud` | [src/retro.cpp:L201](src/retro.cpp#L201) |
 | `Renderer::retroTitleScreen` | [src/retro.cpp:L262](src/retro.cpp#L262) |
-| `Renderer::retroOverlay` | [src/retro.cpp:L308](src/retro.cpp#L308) |
+| `Renderer::retroOverlay` | [src/retro.cpp:L309](src/retro.cpp#L309) |
 | `Audio::start` | [src/audio.cpp:L17](src/audio.cpp#L17) |
 | `Audio::play` | [src/audio.cpp:L23](src/audio.cpp#L23) |
 | `Audio::mute` | [src/audio.cpp:L24](src/audio.cpp#L24) |
@@ -410,7 +411,7 @@ final_project/
     scores.hpp / .cpp        로컬 랭킹 읽기·정렬·원자적 교체
     main.cpp                 창·입력·고정 틱·전체 수명 관리
   tests/test_game.cpp         90개 게임 규칙·회귀 테스트
-  tests/test_controls.cpp     21개 Win32 입력·화면 전환 테스트
+  tests/test_controls.cpp     23개 Win32 입력·화면 전환 테스트
   scripts/update_code_map.py  README 줄 번호 자동 갱신
   scripts/package.py          배포 ZIP·SHA256 생성 및 무결성 검사
   docs/DEMO_GUIDE.md          발표용 시연 순서

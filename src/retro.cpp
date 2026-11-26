@@ -253,7 +253,7 @@ void Renderer::retroHud(const Game& game,const View& view) {
     text(1030,802,view.muted?"N SOUND OFF":"N SOUND ON",0,.88f,.86f,.36f);
     text(842,831,"H HELP / R RANKING / P PAUSE",0,.8f,.8f,.84f);
     text(842,859,"F3 LAB / F4 NEW / F6 SPEED",0,.66f,.66f,.74f);
-    std::string note=view.menu?"SPACE / START   ARROWS / MOVE   SPACE / BOMB":game.notice;
+    std::string note=game.notice;
     if(note.size()>77)note.resize(77);
     text(66,890,note,0,.78f,.78f,.53f);
 }
@@ -298,10 +298,11 @@ void Renderer::retroTitleScreen() {
     };
     bomb(2,6);for(int x:{4,6,8,10,12})bomb(x,8);
 
-    centered(640,784,"Press 'Space bar' to start",1,.90f,.94f,.37f);
-    centered(640,830,"ARROWS: MOVE       SPACE: BOMB",0,.96f,.96f,.92f);
-    centered(640,856,"H / F1: HELP       R / TAB: SCORE BOARD",0,.93f,.93f,.90f);
-    centered(640,882,"N / M: SOUND ON / OFF",0,.93f,.93f,.90f);
+    centered(640,784,"PRESS SPACE BAR TO START",1,.90f,.94f,.37f);
+    centered(640,817,"USE ARROWS TO MOVE",0,.96f,.96f,.92f);
+    centered(640,840,"PRESS SPACE BAR FOR A BOMB",0,.96f,.96f,.92f);
+    centered(640,863,"PRESS R FOR RANKING",0,.93f,.93f,.90f);
+    centered(640,886,"N/M: SOUND ON/OFF",0,.93f,.93f,.90f);
 }
 
 // [05] Home and stage-ready screens freeze the same continuous simulation.
@@ -317,7 +318,7 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
         }
         if(std::any_of(view.ranks.begin(),view.ranks.end(),[](const RankEntry& row){return row.legacyConfirmed;}))
             text(145,650,"Restored record: original time unavailable.",0,.64f,.64f,.70f);
-        centered(426,691,"R / TAB / ESC  BACK",0,.88f,.87f,.38f);return;
+        centered(426,691,"PRESS ENTER TO EXIT",0,.88f,.87f,.38f);return;
     }
     if(view.help) {
         modal(70,170,720,601);centered(430,226,"HOW TO PLAY",2,1,.56f,.1f);
@@ -325,8 +326,8 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
             "Single-player campaign / Three lives, three stages",
             "Q: bomb type / E: remote detonation",
             "SPACE: start, skip ready screen, next stage, retry",
-            "H/F1: help  R/Tab: ranking  N/M: sound",
-            "P: pause  Esc: home  F4: new campaign",
+            "H/F1: help  R: ranking  ENTER: close ranking",
+            "P: pause  Esc: home  N/M: sound  F4: new campaign",
             "F2: BFS area and distances 0-8 / yellow shortest route",
             "F3: feature labs / F5: capture / F6: speed sliders",
             "Mouse: drag speed sliders. RESET ALL restores defaults.",
@@ -344,7 +345,7 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
         centered(426,377,"STAGE 1",1,.27f,.57f,1);
         centered(426,442,"Press SPACE to start",1,.86f,.92f,.35f);
         centered(426,486,"ARROWS: MOVE     SPACE: BOMB",0,.95f,.95f,.90f);
-        centered(426,532,"H: Help    R: Ranking    N: Sound",0,.78f,.78f,.82f);
+        centered(426,532,"H: Help    R: Ranking    N/M: Sound",0,.78f,.78f,.82f);
         return;
     }
     if(view.readyTime>0) {

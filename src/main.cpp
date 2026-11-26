@@ -50,23 +50,30 @@ struct Application {
         } else if(speedControls::hitReset(point)) {cancelSpeedDrag();game.resetEnemySpeeds();}
     }
     void commands() {
-        if(tap(VK_F1)||tap('H')) {view.help=!view.help;view.ranking=false;}
-        if(tap(VK_F2))view.paths=!view.paths;
         if(tap('N')||tap('M')) {view.muted=!view.muted;audio.mute(view.muted);}
-        if(tap(VK_TAB)||tap('R')) {view.ranking=!view.ranking;view.help=false;}
-        if(tap(VK_F6))view.speedPanel=!view.speedPanel;
-        if(!view.canTuneSpeeds(game))cancelSpeedDrag();
-        if(tap(VK_ESCAPE)) {
-            if(view.help)view.help=false;
-            else if(view.ranking)view.ranking=false;
-            else {start();view.menu=true;view.readyTime=0;}
-            return;
-        }
         if(tap(VK_F5)) {
             bool ok=renderer.screenshot((directory/L"capture.bmp").wstring());
             game.notice=ok?"Saved capture.bmp beside the executable.":"Capture failed: check folder write permission.";
         }
-        if(view.help||view.ranking)return;
+        if(view.ranking) {
+            if(tap(VK_RETURN)) {
+                view.ranking=false;pressed.fill(false);buffered.fill(Direction::None);
+            }
+            return;
+        }
+        if(tap(VK_F1)||tap('H'))view.help=!view.help;
+        if(tap(VK_F2))view.paths=!view.paths;
+        if(tap('R')) {
+            view.ranking=true;view.help=false;cancelSpeedDrag();return;
+        }
+        if(tap(VK_F6))view.speedPanel=!view.speedPanel;
+        if(!view.canTuneSpeeds(game))cancelSpeedDrag();
+        if(tap(VK_ESCAPE)) {
+            if(view.help)view.help=false;
+            else {start();view.menu=true;view.readyTime=0;}
+            return;
+        }
+        if(view.help)return;
         if(view.menu) {
             if(tap('1')||tap(VK_SPACE)) {start();pressed[VK_SPACE]=false;}
         } else {

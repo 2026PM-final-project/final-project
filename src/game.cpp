@@ -233,7 +233,7 @@ void Game::loadStage(int number, bool keepAbilities) {
     resetPositions();
     // Initial play has no immunity: the player can demonstrate self-inflicted damage.
     for (auto& p : players) p.invincible = 0;
-    notice = "Clear enemies. Reveal the exit. Get out.";
+    notice.clear();
 }
 void Game::nextStage() {
     if (phase != Phase::StageClear) return;
