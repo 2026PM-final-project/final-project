@@ -348,9 +348,10 @@ int main() {
         auto path=std::filesystem::current_path()/"ranking-test.tmp";
         {std::ofstream out(path);out<<"broken record\n-1 1 1 2026-10-28\n";}
         require(readScores(path).empty());
-        for(int i=0;i<12;++i)require(saveScore(path,{i*100,1+i%3,1+i%2,"2026-10-28"}));
+        for(int i=0;i<12;++i)require(saveScore(path,{i*100,3,1,"2026-11-26 23:59:59"}));
         auto rows=readScores(path);require(rows.size()==10&&rows.front().score==1100&&rows.back().score==200);
-        require(!saveScore(path,{-3,1,1,"2026-10-28"}));std::filesystem::remove(path);
+        require(rows.front().clearedAt=="2026-11-26 23:59:59");
+        require(!saveScore(path,{-3,3,1,"2026-11-26 23:59:59"}));std::filesystem::remove(path);
     });
     test("56 live item cannot be collected from a burning cell",[]{
         auto g=empty();g.items.push_back({{1,1},Item::Fire});g.flames.push_back({{1,1},.5f,0,1});
@@ -582,6 +583,75 @@ int main() {
             g.setEnemySpeed(EnemyKind(index),DefaultEnemySpeeds[index]);
         }
         require(g.speedTuningUsed);g.newGame();require(!g.speedTuningUsed);
+    });
+    // [09] Timestamped final clears exclude legacy logs and preserve exact local times.
+    test("83 legacy and incomplete records are ignored without rewriting valid input",[]{
+        auto path=std::filesystem::current_path()/"ranking-eligibility-test.tmp";
+        const std::string contents="9000\t3\t1\t2026-11-25\n"
+            "8000\t2\t1\t2026-11-26 23:59:59\n7000\t1\t1\t2026-11-26 23:59:59\n"
+            "6000\t3\t1\t2026-11-26 23:59:58\n5000\t3\t1\t2026-11-26 25:00:00\n";
+        {std::ofstream out(path);out<<contents;}
+        auto rows=readScores(path);require(rows.size()==1&&rows[0].score==6000&&rows[0].stage==3);
+        require(rows[0].clearedAt=="2026-11-26 23:59:58");
+        std::ifstream in(path);std::string actual,line;while(std::getline(in,line))actual+=line+'\n';
+        require(actual==contents);in.close();std::filesystem::remove(path);
+    });
+    test("84 ranking timestamps require valid calendar dates and 24-hour times with seconds",[]{
+        auto path=std::filesystem::current_path()/"ranking-timestamp-test.tmp";
+        for(const char* time:{"2026-11-26","2026-11-26 24:00:00","2026-11-26 12:60:00",
+            "2026-11-26 12:00:60","2026-11-26 1:02:03","2026-11-26 01:02:03 PM",
+            "2026-02-29 12:00:00","1900-02-29 12:00:00","2026-04-31 12:00:00",
+            "0000-01-01 00:00:00","2026-00-01 00:00:00","2026-13-01 00:00:00",
+            "2026-11-00 00:00:00","2026-11-32 00:00:00"})require(!saveScore(path,{100,3,1,time}));
+        require(!saveScore(path,{100,1,1,"2026-11-26 00:00:00"}));
+        require(!saveScore(path,{100,2,1,"2026-11-26 00:00:00"}));require(!std::filesystem::exists(path));
+        require(saveScore(path,{100,3,1,"2024-02-29 00:00:00"}));
+        require(saveScore(path,{200,3,1,"2000-02-29 12:34:56"}));
+        require(saveScore(path,{300,3,1,"2026-11-26 23:59:59"}));
+        auto rows=readScores(path);require(rows.size()==3);
+        require(rows[0].clearedAt=="2026-11-26 23:59:59"&&rows[2].clearedAt=="2024-02-29 00:00:00");
+        std::filesystem::remove(path);
+    });
+    test("85 tied scores preserve insertion order exact timestamps and locally generated times",[]{
+        auto path=std::filesystem::current_path()/"ranking-tie-test.tmp";
+        require(saveScore(path,{4000,3,1,"2026-11-26 23:59:59"}));
+        require(saveScore(path,{4000,3,1,"2026-11-26 00:00:00"}));
+        require(saveScore(path,{4500,3,1,"2026-11-26 12:34:56"}));
+        auto timestamp=localTimestamp();require(saveScore(path,{2500,3,1,timestamp}));
+        auto rows=readScores(path);require(rows.size()==4&&rows[0].score==4500);
+        require(rows[1].clearedAt=="2026-11-26 23:59:59"&&rows[2].clearedAt=="2026-11-26 00:00:00");
+        require(rows[3].clearedAt==timestamp);std::filesystem::remove(path);
+    });
+    test("86 only explicitly confirmed date-only records survive restart and future saves",[]{
+        auto path=std::filesystem::current_path()/"ranking-confirmed-legacy-test.tmp";
+        {std::ofstream out(path);out<<"9466\t3\t1\t2026-11-26\tLEGACY_CONFIRMED\n"
+            "6576\t3\t1\t2026-11-26\n"
+            "5000\t2\t1\t2026-11-26\tLEGACY_CONFIRMED\n"
+            "4000\t3\t1\t2026-02-29\tLEGACY_CONFIRMED\n";}
+        auto rows=readScores(path);require(rows.size()==1&&rows[0].score==9466&&rows[0].legacyConfirmed);
+        require(rows[0].clearedAt=="2026-11-26");
+        require(saveScore(path,{10000,3,1,"2026-11-26 23:59:59"}));
+        rows=readScores(path);require(rows.size()==2&&!rows[0].legacyConfirmed&&rows[1].legacyConfirmed);
+        require(rows[1].score==9466&&rows[1].clearedAt=="2026-11-26");
+        std::filesystem::remove(path);
+    });
+    test("87 executable build folders share one persistent ranking file",[]{
+        auto root=std::filesystem::current_path()/"ranking-shared-paths-test.tmp";
+        require(!std::filesystem::exists(root));
+        std::filesystem::create_directories(root/"build");
+        std::filesystem::create_directories(root/"build-vs"/"Debug");
+        {std::ofstream marker(root/"Bomberman.sln");}
+        {std::ofstream marker(root/"CMakeLists.txt");}
+        auto first=scoreFileForExecutable(root/"build");
+        auto restarted=scoreFileForExecutable(root/"build-vs"/"Debug");
+        require(first==root/"data"/"scores.tsv"&&first==restarted);
+        require(saveScore(first,{9466,3,1,"2026-11-26",true}));
+        auto rows=readScores(restarted);require(rows.size()==1&&rows[0].score==9466&&rows[0].legacyConfirmed);
+        require(scoreFileForExecutable("standalone")==std::filesystem::path("standalone")/"scores.tsv");
+        std::filesystem::remove(first);std::filesystem::remove(root/"data");
+        std::filesystem::remove(root/"Bomberman.sln");std::filesystem::remove(root/"CMakeLists.txt");
+        std::filesystem::remove(root/"build-vs"/"Debug");std::filesystem::remove(root/"build-vs");
+        std::filesystem::remove(root/"build");std::filesystem::remove(root);
     });
     std::cout<<"\n"<<passed<<" passed, "<<failed<<" failed\n";
     return failed?1:0;

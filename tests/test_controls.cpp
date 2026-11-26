@@ -1,6 +1,7 @@
 #define BOMBER_INPUT_TEST
 #include "../src/main.cpp"
 #include <cmath>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -232,11 +233,70 @@ int main() {
             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".tmp");
         require(std::filesystem::create_directory(directory));app.directory=directory;
         app.game.setEnemySpeed(EnemyKind::Chaser,2.4f);app.game.resetEnemySpeeds();
+        app.game.stage=3;
         for(auto phase:{Phase::GameOver,Phase::Victory}) {
             app.game.phase=phase;app.record();
             require(!app.recorded&&!std::filesystem::exists(directory/"scores.tsv"));
         }
         app.start();require(!app.game.speedTuningUsed);std::filesystem::remove(directory);
+    });
+    test("C19 game overs intermediate clears invalid victories and practice never save rankings",[]{
+        Application app;
+        auto directory=std::filesystem::current_path()/("ranking-excluded-"+
+            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".tmp");
+        require(std::filesystem::create_directory(directory));app.directory=directory;
+        auto file=directory/"scores.tsv";
+        for(int stage=1;stage<=3;++stage)for(auto phase:{Phase::GameOver,Phase::StageClear}) {
+            app.game.stage=stage;app.game.phase=phase;app.record();
+            require(!app.recorded&&!std::filesystem::exists(file));
+        }
+        app.game.phase=Phase::Victory;
+        for(int stage=1;stage<=2;++stage) {
+            app.game.stage=stage;app.record();require(!app.recorded&&!std::filesystem::exists(file));
+        }
+        app.game.stage=3;app.game.practice=true;app.record();
+        require(!app.recorded&&!std::filesystem::exists(file));std::filesystem::remove(directory);
+    });
+    test("C20 a real final clear saves its timestamp once and a fresh campaign can record again",[]{
+        Application app;arena(app);
+        auto directory=std::filesystem::current_path()/("ranking-cleared-"+
+            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".tmp");
+        require(std::filesystem::create_directory(directory));app.directory=directory;
+        auto file=directory/"scores.tsv";
+        auto clearFinalStage=[&] {
+            app.game.stage=3;app.game.enemies.clear();app.game.exitRevealed=true;
+            app.game.setTile(app.game.exit,Tile::Floor);
+            app.game.players[0].x=app.game.exit.x+.5f;app.game.players[0].y=app.game.exit.y+.5f;
+            app.game.resolveContacts();require(app.game.phase==Phase::Victory);app.record();
+        };
+        app.game.score=2500;clearFinalStage();
+        auto rows=readScores(file);require(app.recorded&&rows.size()==1&&rows[0].score==4100);
+        require(rows[0].stage==3&&rows[0].clearedAt.size()==19&&app.view.ranks.size()==1);
+        const auto timestamp=rows[0].clearedAt;
+        {std::ifstream in(file);std::string line;std::getline(in,line);require(line=="4100\t3\t1\t"+timestamp);}
+        app.game.score=9999;app.record();rows=readScores(file);
+        require(rows.size()==1&&rows[0].score==4100&&rows[0].clearedAt==timestamp);
+        app.start();clearFinalStage();rows=readScores(file);
+        require(rows.size()==2&&rows[0].score==4100&&rows[1].score==1600);
+        std::filesystem::remove(file);std::filesystem::remove(directory);
+    });
+    test("C21 shared rankings preserve the confirmed record when another campaign finishes",[]{
+        Application app;arena(app);
+        auto directory=std::filesystem::current_path()/("ranking-shared-"+
+            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".tmp");
+        require(std::filesystem::create_directory(directory));app.directory=directory/"unused-build";
+        app.rankingFile=directory/"data"/"scores.tsv";
+        require(saveScore(app.rankingFile,{9466,3,1,"2026-11-26",true}));
+        app.game.stage=3;app.game.phase=Phase::Victory;app.game.score=5000;app.record();
+        auto rows=readScores(app.rankingFile);
+        require(rows.size()==2&&rows[0].score==9466&&rows[0].legacyConfirmed);
+        require(rows[1].score==5000&&!rows[1].legacyConfirmed&&rows[1].clearedAt.size()==19);
+        require(!std::filesystem::exists(app.directory/"scores.tsv"));
+        Application restarted;restarted.directory=directory/"another-build";restarted.rankingFile=app.rankingFile;
+        restarted.view.ranks=readScores(restarted.scoreFile());
+        require(restarted.view.ranks.size()==2&&restarted.view.ranks[0].score==9466);
+        std::filesystem::remove(app.rankingFile);std::filesystem::remove(directory/"data");
+        std::filesystem::remove(directory);
     });
     std::cout<<passed<<" controls passed, "<<failed<<" failed\n";
     return failed?1:0;

@@ -23,7 +23,7 @@ struct Application {
     std::array<bool,256> held{},pressed{};
     std::array<Direction,1> buffered{Direction::None};
     bool running=true,recorded=false,captureMode=false;
-    std::filesystem::path directory;
+    std::filesystem::path directory,rankingFile;
 
     void start() {
         cancelSpeedDrag();
@@ -110,12 +110,13 @@ struct Application {
         return input;
     }
     bool frozen() const {return captureMode||view.menu||view.help||view.ranking||view.readyTime>0;}
+    std::filesystem::path scoreFile() const {return rankingFile.empty()?directory/L"scores.tsv":rankingFile;}
     void record() {
-        if(recorded||game.practice||game.speedTuningUsed||(game.phase!=Phase::Victory&&game.phase!=Phase::GameOver))return;
+        if(recorded||game.practice||game.speedTuningUsed||game.stage!=3||game.phase!=Phase::Victory)return;
         recorded=true;
-        if(!saveScore(directory/L"scores.tsv",{game.score,game.stage,1,localDate()}))
+        if(!saveScore(scoreFile(),{game.score,game.stage,1,localTimestamp()}))
             game.notice="Ranking could not be saved. Check folder write permission.";
-        view.ranks=readScores(directory/L"scores.tsv");
+        view.ranks=readScores(scoreFile());
     }
 };
 static Application* application=nullptr;
@@ -188,7 +189,8 @@ int WINAPI WinMain(HINSTANCE instance,HINSTANCE,LPSTR commandLine,int show) {
     if(captureOption!=std::string::npos)capture=args.substr(captureOption+prefix.size());
     wchar_t executable[32768]{};GetModuleFileNameW(nullptr,executable,32768);
     app.directory=std::filesystem::path(executable).parent_path();
-    app.view.ranks=readScores(app.directory/L"scores.tsv");
+    app.rankingFile=scoreFileForExecutable(app.directory);
+    app.view.ranks=readScores(app.scoreFile());
     WNDCLASSW wc{};wc.style=CS_OWNDC;wc.lpfnWndProc=windowProcedure;
     wc.hInstance=instance;wc.lpszClassName=L"SNU_BomberLab_2026";
     wc.hCursor=LoadCursor(nullptr,IDC_ARROW);RegisterClassW(&wc);
@@ -214,6 +216,7 @@ int WINAPI WinMain(HINSTANCE instance,HINSTANCE,LPSTR commandLine,int show) {
             app.game.explodeBombs({id});
         }
         if(capture=="help")app.view.help=true;
+        if(capture=="ranking")app.view.ranking=true;
         if(capture=="stage2") {app.start();app.game.loadStage(2);app.view.readyTime=0;}
         app.captureMode=true;
     } else app.audio.start();

@@ -309,11 +309,14 @@ void Renderer::retroOverlay(const Game& game,const View& view) {
     auto modal=[&](float x,float y,float w,float h){rect(x,y,w,h,{0,0,0});border(x,y,w,h,Purple);};
     if(view.ranking) {
         modal(116,205,620,515);centered(426,260,"HIGH SCORES",2,1,.56f,.10f);
-        if(view.ranks.empty())centered(426,330,"No campaign records yet.",0,.90f,.90f,.84f);
+        centered(426,291,"STAGE 3 CLEARS / LOCAL TIME (24H)",0,.78f,.78f,.82f);
+        if(view.ranks.empty())centered(426,330,"Clear STAGE 3 to set a record.",0,.90f,.90f,.84f);
         for(size_t i=0;i<view.ranks.size()&&i<10;++i) {
             const auto& row=view.ranks[i];
-            text(145,315+float(i)*30,std::to_string(i+1)+". "+number(row.score)+"  S"+std::to_string(row.stage)+"  "+row.date,0,.94f,.94f,.88f);
+            text(145,315+float(i)*30,std::to_string(i+1)+". "+number(row.score)+"  S"+std::to_string(row.stage)+"  "+row.clearedAt,0,.94f,.94f,.88f);
         }
+        if(std::any_of(view.ranks.begin(),view.ranks.end(),[](const RankEntry& row){return row.legacyConfirmed;}))
+            text(145,650,"Restored record: original time unavailable.",0,.64f,.64f,.70f);
         centered(426,691,"R / TAB / ESC  BACK",0,.88f,.87f,.38f);return;
     }
     if(view.help) {
